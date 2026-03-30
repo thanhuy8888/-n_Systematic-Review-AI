@@ -1,0 +1,7 @@
+{
+  "name": "IS Systematic Review",
+  "description": "An AI-powered agent for systematic reviews, featuring abstract screening, data extraction, and PRISMA flow visualization.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
