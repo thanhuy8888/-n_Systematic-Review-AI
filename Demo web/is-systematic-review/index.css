@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@theme {
+  --color-vnu-blue: #0054A6;
+  --color-vnu-yellow: #FDB813;
+  --color-vnu-white: #FFFFFF;
+}
