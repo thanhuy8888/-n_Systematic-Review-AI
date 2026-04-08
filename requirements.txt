@@ -6,3 +6,14 @@ transformers
 torch
 PyMuPDF
 python-multipart
+rispy
+bibtexparser
+beautifulsoup4
+scikit-learn
+matplotlib
+seaborn
+nltk
+imbalanced-learn
+sentence-transformers
+xgboost
+joblib

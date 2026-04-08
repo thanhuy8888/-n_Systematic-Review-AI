@@ -1,0 +1,9 @@
+@echo off
+chcp 65001 >nul
+echo Dang khoi dong Backend AI...
+cd /d c:\laragon\www\doantotnghiep
+echo Dang kiem tra thu vien (co the mat vai phut neu la lan dau)...
+call .\venv\Scripts\python.exe -m pip install -r requirements.txt
+echo Thu vien da san sang! Chay Server AI tren cong 8000...
+call .\venv\Scripts\python.exe -m uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
+pause

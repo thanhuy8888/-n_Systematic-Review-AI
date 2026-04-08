@@ -1,0 +1,58 @@
+# Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vite
+dist/
+.vite/
+
+# Database
+*.db
+*.sqlite3
+
+# Temp files
+test3.py
+test_*.py
+evaluate_output.txt
+compare_output.txt
+test_tuning_v2.py
+
+# System
+.DS_Store
+Thumbs.db
+
+# Large models
+# *.pkl (Allowing our specific hybrid model)
+# (Note: I will add the hybrid_xgb_model.pkl specifically if it's small, but usually keep them out if they are large.
+# Let me check the size of the pkl first.)
