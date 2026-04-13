@@ -24,22 +24,66 @@ const CriteriaEditor: React.FC<Props> = ({ criteria, onUpdate }) => {
           </svg>
         </div>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {[
-          { label: 'Population', field: 'population', placeholder: 'e.g., Adults with hypertension' },
-          { label: 'Intervention', field: 'intervention', placeholder: 'e.g., Daily meditation' },
-          { label: 'Comparison', field: 'comparison', placeholder: 'e.g., No intervention' },
-          { label: 'Outcome', field: 'outcome', placeholder: 'e.g., Blood pressure' },
-          { label: 'Study Type', field: 'studyType', placeholder: 'e.g., RCT or Cohort' },
+          { 
+            label: 'Population', field: 'population', 
+            placeholder: 'Vd: Chuột nhắt C57BL/6, DBA/2...', vn: 'Đối tượng (Chuột)',
+            suggestions: ['C57BL/6 mice', 'DBA/2 mice', 'Adult male mice', 'Obese mice']
+          },
+          { 
+            label: 'Intervention', field: 'intervention', 
+            placeholder: 'Vd: HFD, HFHS, Western Diet...', vn: 'Chế độ ăn can thiệp',
+            suggestions: ['High-Fat Diet (HFD)', 'High-Sugar Diet', 'HFHS (Western Diet)', 'High Cholesterol Diet']
+          },
+          { 
+            label: 'Comparison', field: 'comparison', 
+            placeholder: 'Vd: Standard chow, Low-fat diet...', vn: 'Chế độ ăn đối chứng',
+            suggestions: ['Standard chow diet', 'Purified low-fat diet', 'Pair-fed control']
+          },
+          { 
+            label: 'Outcome', field: 'outcome', 
+            placeholder: 'Vd: Body weight, HOMA-IR, Steatosis...', vn: 'Chỉ số chuyển hóa',
+            suggestions: ['Body weight & Adiposity', 'HOMA-IR', 'Lipotoxic Steatosis', 'TC/TG/LDL-C', 'ALT/AST Liver enzymes']
+          },
+          { 
+            label: 'Study Type', field: 'studyType', 
+            placeholder: 'Vd: In vivo, Randomized...', vn: 'Loại hình nghiên cứu',
+            suggestions: ['In vivo mouse model', 'Randomized controlled trial']
+          },
         ].map(item => (
-          <div key={item.field}>
-            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1 ml-1">{item.label}</label>
+          <div key={item.field} className="relative">
+            <div className="flex items-center gap-1.5 mb-1.5 ml-1">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-tighter">{item.label}</label>
+              <span className="text-[9px] text-slate-400 font-medium normal-case tracking-normal">({item.vn})</span>
+            </div>
+            
             <input 
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-vnu-blue/20 focus:border-vnu-blue outline-none transition-all placeholder:text-slate-300"
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-vnu-blue/20 focus:border-vnu-blue outline-none transition-all placeholder:text-slate-300 font-medium shadow-inner"
               value={criteria[item.field as keyof ReviewCriteria]}
               onChange={(e) => handleChange(item.field as keyof ReviewCriteria, e.target.value)}
               placeholder={item.placeholder}
             />
+
+            {/* AI Smart Chips */}
+            <div className="flex flex-wrap gap-1.5 mt-2 ml-1">
+               <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-blue-500 mr-1 mt-0.5">
+                  ✨ Gợi ý:
+               </div>
+               {item.suggestions.map(sug => (
+                 <button 
+                   key={sug}
+                   onClick={() => {
+                     const currentVal = criteria[item.field as keyof ReviewCriteria] as string;
+                     const newVal = currentVal ? `${currentVal}, ${sug}` : sug;
+                     handleChange(item.field as keyof ReviewCriteria, newVal);
+                   }}
+                   className="text-[9px] font-semibold text-slate-600 bg-white border border-slate-200 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 px-2 py-0.5 rounded-md transition-colors active:scale-95"
+                 >
+                   {sug}
+                 </button>
+               ))}
+            </div>
           </div>
         ))}
       </div>

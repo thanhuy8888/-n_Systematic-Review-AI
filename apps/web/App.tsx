@@ -16,7 +16,7 @@ const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasLoaded, setHasLoaded] = useState(false);
-  
+  const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
   const [criteria, setCriteria] = useState<ReviewCriteria>({
     population: 'Adults with hypertension',
     intervention: 'Daily meditation practice',
@@ -85,6 +85,70 @@ const App: React.FC = () => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredPapers.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredPapers, currentPage]);
+
+  // Handle global keyboard shortcuts and auto-selection
+  useEffect(() => {
+    if (paginatedPapers.length > 0 && !selectedPaperId) {
+      setSelectedPaperId(paginatedPapers[0].id);
+    } else if (paginatedPapers.length === 0) {
+      setSelectedPaperId(null);
+    }
+  }, [paginatedPapers, selectedPaperId]);
+
+  useEffect(() => {
+    if (activeStage === ReviewStage.IDENTIFICATION) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in inputs (like search)
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      
+      const currentIndex = filteredPapers.findIndex(p => p.id === selectedPaperId);
+      if (currentIndex === -1) return;
+
+      const goNext = () => {
+        if (currentIndex < filteredPapers.length - 1) {
+          const nextId = filteredPapers[currentIndex + 1].id;
+          setSelectedPaperId(nextId);
+          // Auto change page block if moving past current paginated view
+          const nextPageIndex = Math.floor((currentIndex + 1) / ITEMS_PER_PAGE) + 1;
+          if (nextPageIndex !== currentPage) setCurrentPage(nextPageIndex);
+        }
+      };
+
+      const goPrev = () => {
+        if (currentIndex > 0) {
+          const prevId = filteredPapers[currentIndex - 1].id;
+          setSelectedPaperId(prevId);
+          const prevPageIndex = Math.floor((currentIndex - 1) / ITEMS_PER_PAGE) + 1;
+          if (prevPageIndex !== currentPage) setCurrentPage(prevPageIndex);
+        }
+      };
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        goNext();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        goPrev();
+      } else if (e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        updatePaperStatus(selectedPaperId!, PaperStatus.ABSTRACT_INCLUDE);
+        goNext();
+      } else if (e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        updatePaperStatus(selectedPaperId!, PaperStatus.ABSTRACT_EXCLUDE);
+        goNext();
+      } else if (e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        updatePaperStatus(selectedPaperId!, PaperStatus.MAYBE);
+        goNext();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeStage, selectedPaperId, filteredPapers, currentPage]);
+
   const updatePaperStatus = (id: string, status: PaperStatus) => {
     setPapers(prev => prev.map(p => p.id === id ? { ...p, status } : p));
   };
@@ -385,127 +449,164 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  {paginatedPapers.map(paper => (
-                    <div key={paper.id} className="group bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:border-vnu-blue/30 transition-all flex">
-                      <div className={`w-2 ${
-                        paper.status === PaperStatus.ABSTRACT_INCLUDE ? 'bg-emerald-500' :
-                        paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'bg-rose-500' :
-                        paper.status === PaperStatus.MAYBE ? 'bg-amber-500' : 'bg-slate-200'
-                      }`}></div>
-                      
-                      <div className="flex-1 p-6">
-                        <div className="flex justify-between items-start gap-6 mb-4">
-                          <div className="flex-1">
-                            <h3 className="font-bold text-slate-900 text-lg leading-snug mb-2 group-hover:text-vnu-blue transition-colors">{paper.title}</h3>
-                            <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                <div className="flex gap-6 h-[72vh] min-h-[600px] mt-6">
+                  {/* Left Column: Dense List View */}
+                  <div className="w-[38%] bg-white border border-slate-200 rounded-2xl overflow-y-auto shadow-sm flex flex-col hide-scrollbar relative">
+                     {paginatedPapers.map(paper => (
+                        <div 
+                           key={paper.id} 
+                           onClick={() => setSelectedPaperId(paper.id)}
+                           className={`p-4 border-b border-slate-100 cursor-pointer transition-all flex gap-3 group ${
+                              selectedPaperId === paper.id ? 'bg-blue-50/70 border-l-4 border-l-vnu-blue ring-1 ring-inset ring-vnu-blue/10' : 'hover:bg-slate-50 border-l-4 border-l-transparent'
+                           }`}
+                        >
+                           <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ring-4 ${
+                              paper.status === PaperStatus.ABSTRACT_INCLUDE ? 'bg-emerald-500 ring-emerald-50' :
+                              paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'bg-rose-500 ring-rose-50' :
+                              paper.status === PaperStatus.MAYBE ? 'bg-amber-500 ring-amber-50' : 'bg-slate-300 ring-slate-50'
+                           }`}></div>
+                           <div className="flex-1 pr-2">
+                              <h4 className={`text-[13px] font-bold line-clamp-2 leading-snug mb-2 transition-colors ${
+                                 selectedPaperId === paper.id ? 'text-vnu-blue' : 'text-slate-800 group-hover:text-vnu-blue'
+                              }`}>{paper.title}</h4>
+                              <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                 <span className="truncate max-w-[150px]">{paper.authors?.split(',')[0]}</span>
+                                 <span className="bg-slate-100 px-2 py-0.5 rounded-md">{paper.year}</span>
+                              </div>
+                              {paper.aiScreeningReason && (
+                                <div className="mt-2 text-[10px] font-semibold text-blue-600 bg-blue-50 inline-block px-1.5 py-0.5 rounded">
+                                  ⚡ AI Scored
                                 </div>
-                                <span>{paper.authors?.split(',')[0]} et al.</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center text-vnu-blue">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                </div>
-                                <span className="text-vnu-blue">{paper.year}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                                </div>
-                                <span className="italic normal-case font-medium">{paper.journal}</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex flex-row md:flex-col gap-2 shrink-0">
-                            <button 
-                              onClick={() => updatePaperStatus(paper.id, PaperStatus.ABSTRACT_INCLUDE)}
-                              className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all shadow-sm ${
-                                paper.status === PaperStatus.ABSTRACT_INCLUDE ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                              }`}
-                            >
-                              Include
-                            </button>
-                            <button 
-                              onClick={() => updatePaperStatus(paper.id, PaperStatus.MAYBE)}
-                              className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all shadow-sm ${
-                                paper.status === PaperStatus.MAYBE ? 'bg-amber-500 text-white shadow-amber-200' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-                              }`}
-                            >
-                              Maybe
-                            </button>
-                            <button 
-                              onClick={() => updatePaperStatus(paper.id, PaperStatus.ABSTRACT_EXCLUDE)}
-                              className={`px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all shadow-sm ${
-                                paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'bg-rose-600 text-white shadow-rose-200' : 'bg-rose-50 text-rose-600 hover:bg-rose-100'
-                              }`}
-                            >
-                              Exclude
-                            </button>
-                            <button 
-                              onClick={(e) => handleRemovePaper(paper.id, e)}
-                              className="px-4 py-2 text-[10px] font-black uppercase rounded-xl transition-all shadow-sm bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center"
-                              title="Delete Paper"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                          </div>
+                              )}
+                           </div>
                         </div>
-
-                        <div className="relative mb-5">
-                          <p className="text-sm text-slate-600 leading-relaxed line-clamp-3 font-medium">
-                            {paper.abstract}
-                          </p>
-                          <div className="absolute bottom-0 left-0 w-full h-6 bg-gradient-to-t from-white to-transparent"></div>
+                     ))}
+                     {paginatedPapers.length === 0 && (
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+                           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                           <p className="text-slate-400 font-bold text-sm">No results in this stage.</p>
                         </div>
+                     )}
+                  </div>
 
-                        {paper.aiScreeningReason && (
-                          <div className="bg-vnu-blue/[0.03] border border-vnu-blue/10 p-4 rounded-2xl text-xs text-slate-600 mb-5 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-vnu-blue/40"></div>
-                            <div className="flex items-start gap-3">
-                              <div className="bg-vnu-blue/10 p-1.5 rounded-lg text-vnu-blue">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                </svg>
+                  {/* Right Column: Split Detail View */}
+                  <div className="w-[62%] bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden relative">
+                     {(() => {
+                        const paper = filteredPapers.find(p => p.id === selectedPaperId);
+                        if (!paper) return (
+                           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50/20">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+                              <span className="font-bold">Select an article from the list to screen</span>
+                           </div>
+                        );
+                        return (
+                           <>
+                              {/* Action Bar (Sticky) */}
+                              <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-200 p-4 z-10 flex gap-4 justify-center">
+                                 <button 
+                                    onClick={() => updatePaperStatus(paper.id, PaperStatus.ABSTRACT_INCLUDE)}
+                                    className={`relative flex flex-col items-center justify-center w-full max-w-[140px] px-2 py-3 rounded-xl transition-all border ${
+                                       paper.status === PaperStatus.ABSTRACT_INCLUDE ? 'bg-emerald-600 border-emerald-600 text-white shadow-xl shadow-emerald-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600'
+                                    }`}
+                                 >
+                                    <span className="font-black uppercase tracking-widest text-sm mb-1 z-10 relative">Include</span>
+                                    <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.ABSTRACT_INCLUDE ? 'text-emerald-200' : 'text-slate-400'}`}>Shortcut: I</span>
+                                    {paper.status === PaperStatus.ABSTRACT_INCLUDE && <div className="absolute inset-0 bg-white/20 blur-sm rounded-xl"></div>}
+                                 </button>
+                                 
+                                 <button 
+                                    onClick={() => updatePaperStatus(paper.id, PaperStatus.MAYBE)}
+                                    className={`relative flex flex-col items-center justify-center w-full max-w-[140px] px-2 py-3 rounded-xl transition-all border ${
+                                       paper.status === PaperStatus.MAYBE ? 'bg-amber-500 border-amber-500 text-white shadow-xl shadow-amber-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-500 hover:text-amber-600'
+                                    }`}
+                                 >
+                                    <span className="font-black uppercase tracking-widest text-sm mb-1 z-10 relative">Maybe</span>
+                                    <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.MAYBE ? 'text-amber-100' : 'text-slate-400'}`}>Shortcut: M</span>
+                                 </button>
+
+                                 <button 
+                                    onClick={() => updatePaperStatus(paper.id, PaperStatus.ABSTRACT_EXCLUDE)}
+                                    className={`relative flex flex-col items-center justify-center w-full max-w-[140px] px-2 py-3 rounded-xl transition-all border ${
+                                       paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'bg-rose-600 border-rose-600 text-white shadow-xl shadow-rose-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-rose-500 hover:text-rose-600'
+                                    }`}
+                                 >
+                                    <span className="font-black uppercase tracking-widest text-sm mb-1 z-10 relative">Exclude</span>
+                                    <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'text-rose-200' : 'text-slate-400'}`}>Shortcut: E</span>
+                                 </button>
                               </div>
-                              <p className="leading-relaxed">
-                                <span className="font-black text-vnu-blue mr-2 uppercase tracking-tighter">AI Verdict:</span>
-                                {paper.aiScreeningReason}
-                              </p>
-                            </div>
-                          </div>
-                        )}
 
-                        {paper.extractionData && (
-                          <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-xs text-slate-700 mb-5">
-                             <h4 className="font-bold mb-2 text-emerald-800 uppercase tracking-widest text-[10px]">Extracted Data</h4>
-                             <p className="mb-1"><span className="font-bold text-emerald-600">Methodology:</span> {paper.extractionData.methodology}</p>
-                             <p className="mb-1"><span className="font-bold text-emerald-600">Sample Size:</span> {paper.extractionData.sampleSize}</p>
-                             <p className="mb-1"><span className="font-bold text-emerald-600">Key Findings:</span> {paper.extractionData.keyFindings}</p>
-                             <p className="mb-1"><span className="font-bold text-emerald-600">Limitations:</span> {paper.extractionData.limitations}</p>
-                             <p><span className="font-bold text-emerald-600">Bias Risk:</span> {paper.extractionData.riskOfBias}</p>
-                          </div>
-                        )}
+                              {/* Document Detail Body */}
+                              <div className="p-8 overflow-y-auto flex-1 hide-scrollbar">
+                                 <h2 className="text-[22px] font-bold text-slate-900 mb-6 leading-relaxed font-serif">{paper.title}</h2>
+                                 
+                                 <div className="flex flex-wrap items-center gap-3 mb-8">
+                                    <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider">{paper.year}</span>
+                                    <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                                    <span className="text-slate-600 text-sm font-semibold">{paper.authors}</span>
+                                    <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                                    <span className="text-vnu-blue text-sm font-semibold italic">{paper.journal}</span>
+                                 </div>
 
-                        <div className="flex items-center gap-2">
-                          {paper.keywords?.slice(0, 6).map(kw => (
-                            <span key={kw} className="text-[9px] bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg font-bold uppercase tracking-tighter border border-slate-200/50">
-                              {kw}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {paginatedPapers.length === 0 && (
-                    <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-slate-300">
-                      <p className="text-slate-400 font-bold">No results found in this stage.</p>
-                    </div>
-                  )}
+                                 {paper.aiScreeningReason && (
+                                     <div className="bg-blue-50/50 border border-blue-100 p-5 rounded-2xl mb-8">
+                                         <div className="flex items-start gap-4">
+                                             <div className="bg-white p-2.5 rounded-xl border border-blue-100 text-blue-600 shadow-sm shrink-0 mt-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                             </div>
+                                             <div>
+                                                 <h4 className="flex items-center gap-2 text-blue-900 font-bold text-sm uppercase tracking-widest mb-2">
+                                                   AI Evaluation Rationale
+                                                   <span className="bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-full">Beta</span>
+                                                 </h4>
+                                                 <p className="text-blue-900/80 text-[15px] leading-relaxed font-medium">{paper.aiScreeningReason}</p>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 )}
+
+                                 <div className="prose max-w-none">
+                                     <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
+                                       <span className="w-4 h-[2px] bg-slate-300"></span> Abstract
+                                     </h3>
+                                     <p className="text-slate-700 text-[16px] leading-relaxed whitespace-pre-line text-justify font-serif">{paper.abstract}</p>
+                                 </div>
+
+                                 {paper.extractionData && (
+                                    <div className="mt-10 pt-8 border-t border-slate-100">
+                                       <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-600 mb-6">
+                                         <span className="w-4 h-[2px] bg-emerald-500"></span> Extracted Structured Data (QA)
+                                       </h3>
+                                       <div className="bg-white border border-emerald-100 shadow-lg shadow-emerald-100/50 rounded-2xl overflow-hidden text-sm">
+                                          <div className="grid grid-cols-[140px_1fr] border-b border-emerald-50">
+                                             <div className="bg-emerald-50/50 p-4 font-bold text-emerald-800 uppercase tracking-widest text-[11px] flex items-center">Methodology</div>
+                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.methodology}</div>
+                                          </div>
+                                          <div className="grid grid-cols-[140px_1fr] border-b border-emerald-50">
+                                             <div className="bg-emerald-50/50 p-4 font-bold text-emerald-800 uppercase tracking-widest text-[11px] flex items-center">Sample Size</div>
+                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.sampleSize}</div>
+                                          </div>
+                                          <div className="grid grid-cols-[140px_1fr] border-b border-emerald-50">
+                                             <div className="bg-emerald-50/50 p-4 font-bold text-emerald-800 uppercase tracking-widest text-[11px] flex items-center">Key Findings</div>
+                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.keyFindings}</div>
+                                          </div>
+                                          <div className="grid grid-cols-[140px_1fr] border-b border-emerald-50">
+                                             <div className="bg-emerald-50/50 p-4 font-bold text-emerald-800 uppercase tracking-widest text-[11px] flex items-center">Limitations</div>
+                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.limitations}</div>
+                                          </div>
+                                          <div className="grid grid-cols-[140px_1fr]">
+                                             <div className="bg-rose-50/50 p-4 font-bold text-rose-800 uppercase tracking-widest text-[11px] flex items-center">Risk of Bias</div>
+                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.riskOfBias}</div>
+                                          </div>
+                                       </div>
+                                    </div>
+                                 )}
+                              </div>
+                           </>
+                        );
+                     })()}
+                  </div>
                 </div>
               </>
             )}
