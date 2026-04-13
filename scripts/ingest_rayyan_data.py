@@ -35,18 +35,16 @@ def process_exported_rayyan_dataset(raw_data_path: str, output_path: str):
             logger.warning(f"Directory {tag_dir} not found. Skipping.")
             continue
             
-        ris_path = os.path.join(tag_dir, "articles.ris")
-        csv_path = os.path.join(tag_dir, "customizations_log.csv")
-        
-        # 1. Parse texts
-        if os.path.exists(ris_path):
-            logger.info(f"Parsing RIS file: {ris_path}")
-            papers = parse_ris(ris_path)
-        else:
-            logger.warning(f"articles.ris not found in {tag_dir}")
-            papers = []
+        # 1. Parse texts - Find all .ris files recursively
+        from pathlib import Path
+        all_ris_files = Path(tag_dir).rglob('*.ris')
+        papers = []
+        for ris_file in all_ris_files:
+            logger.info(f"Parsing RIS file: {ris_file}")
+            papers.extend(parse_ris(str(ris_file)))
             
-        # 2. Parse labels
+        # 2. Parse labels (we can skip CSV if we trust folder name, but let's keep it if present in root)
+        csv_path = os.path.join(tag_dir, "customizations_log.csv")
         if os.path.exists(csv_path):
             logger.info(f"Parsing CSV Labels: {csv_path}")
             labels_map = parse_rayyan_csv(csv_path)

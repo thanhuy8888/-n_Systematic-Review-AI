@@ -22,4 +22,4 @@ Thay vì đếm từ, PubMedBERT "đọc" câu, chuyển chuỗi câu đó thàn
 *   **Khắc Phục Điểm Mù Dữ Liệu:** Kết hợp **SMOTE** (sinh dữ liệu giả lập), mô hình không còn bị chèn ép bởi 800 bài báo "Exclude" so với chỉ 160 bài "Include". Trọng số `scale_pos_weight` của XGBoost ép AI phải cẩn thận hơn rất nhiều trước khi đưa ra quyết định "loại bài báo".
 
 ### ✨ Kết luận So sánh 
-Sự kết hợp giữa **Nơ-ron Ngữ nghĩa** & **XGBoost** cho phép ta vừa duy trì được *tốc độ chạy tương đối ổn định* trên CPU (XGBoost), mà vẫn kế thừa được *Trí tuệ nhân tạo Y khoa* để vượt bứt phá đánh bay giới hạn "Trần Đếm Khóa 83%", thẳng tiến tới **Accuracy 96%** & **ROC-AUC 95%**! 🚀
+Sự kết hợp giữa **Nơ-ron Ngữ nghĩa** & **XGBoost** cho phép ta vừa duy trì được *tốc độ chạy tương đối ổn định* trên CPU (XGBoost), mà vẫn kế thừa được *Trí tuệ nhân tạo Y khoa* để vượt bứt phá đánh bay giới hạn "Trần Đếm Khóa 83%", thẳng tiến tới **Accuracy 93%** & **ROC-AUC 98%**! 🚀
