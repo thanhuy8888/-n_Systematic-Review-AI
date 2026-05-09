@@ -135,8 +135,12 @@ def predict_screening(request: PredictRequest):
     # 2. Determine which text to screen against
     # If fullText is provided (PDF), use it for deeper analysis
     text_to_screen = paper.abstract
-    if paper.fullText and len(paper.fullText.strip()) > 200:
-        # Use first 3000 chars of fullText for full-text screening
+    if paper.fullText and len(paper.fullText.strip()) > 2000:
+        # Skip the first 2000 chars to bypass Title, Authors, and Abstract.
+        # Take the next 6000 chars (usually Introduction, Methods, and Results)
+        text_to_screen = paper.fullText[2000:8000]
+        print(f"[Predict] Using fullText body ({len(text_to_screen)} chars) for: {paper.title[:50]}")
+    elif paper.fullText and len(paper.fullText.strip()) > 200:
         text_to_screen = paper.fullText[:3000]
         print(f"[Predict] Using fullText ({len(paper.fullText)} chars) for: {paper.title[:50]}")
     else:
