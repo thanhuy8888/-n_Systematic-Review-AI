@@ -96,7 +96,7 @@ class TransformerScreeningModel:
                 # Semantic check: is the concept discussed even if exact word isn't there?
                 try:
                     inputs_kw = self.tokenizer(kw, return_tensors="pt", truncation=True, padding=True, max_length=32).to(self.device)
-                    inputs_paper = self.tokenizer(paper_text[:1000], return_tensors="pt", truncation=True, padding=True, max_length=512).to(self.device)
+                    inputs_paper = self.tokenizer(paper_text[:2500], return_tensors="pt", truncation=True, padding=True, max_length=512).to(self.device)
                     
                     with torch.no_grad():
                         emb_kw = base_model(**inputs_kw).last_hidden_state[:, 0, :]
