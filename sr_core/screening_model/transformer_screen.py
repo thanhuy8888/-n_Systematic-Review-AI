@@ -269,7 +269,7 @@ class TransformerScreeningModel:
         matched: List[str] = [kw for kw in keywords if kw in text_lower]
 
         try:
-            paper_emb = self.embedder.encode([paper_text[:2000]], show_progress_bar=False)[0]
+            paper_emb = self.embedder.encode([paper_text[:2500]], show_progress_bar=False)[0]
         except Exception:
             paper_emb = None
 

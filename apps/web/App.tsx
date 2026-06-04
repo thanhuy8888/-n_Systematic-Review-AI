@@ -69,7 +69,13 @@ const App: React.FC = () => {
     }
 
     if (decisionFilter !== 'ALL') {
-      result = result.filter(p => p.status === decisionFilter);
+      if (decisionFilter === 'INCLUDE') {
+        result = result.filter(p => p.status === PaperStatus.ABSTRACT_INCLUDE || p.status === PaperStatus.FULLTEXT_INCLUDE || p.status === PaperStatus.EXTRACTED);
+      } else if (decisionFilter === 'EXCLUDE') {
+        result = result.filter(p => p.status === PaperStatus.ABSTRACT_EXCLUDE || p.status === PaperStatus.FULLTEXT_EXCLUDE);
+      } else {
+        result = result.filter(p => p.status === decisionFilter);
+      }
     }
 
     if (searchQuery.trim()) {
@@ -403,8 +409,8 @@ const App: React.FC = () => {
             <div className="space-y-1.5">
               {[
                 { label: 'All Studies', value: 'ALL', count: papers.length, icon: 'M4 6h16M4 10h16M4 14h16M4 18h16' },
-                { label: 'Included', value: PaperStatus.ABSTRACT_INCLUDE, count: papers.filter(p => p.status === PaperStatus.ABSTRACT_INCLUDE).length, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: 'M5 13l4 4L19 7' },
-                { label: 'Excluded', value: PaperStatus.ABSTRACT_EXCLUDE, count: papers.filter(p => p.status === PaperStatus.ABSTRACT_EXCLUDE).length, color: 'text-rose-600', bg: 'bg-rose-50', icon: 'M6 18L18 6M6 6l12 12' },
+                { label: 'Included', value: 'INCLUDE', count: papers.filter(p => p.status === PaperStatus.ABSTRACT_INCLUDE || p.status === PaperStatus.FULLTEXT_INCLUDE || p.status === PaperStatus.EXTRACTED).length, color: 'text-emerald-600', bg: 'bg-emerald-50', icon: 'M5 13l4 4L19 7' },
+                { label: 'Excluded', value: 'EXCLUDE', count: papers.filter(p => p.status === PaperStatus.ABSTRACT_EXCLUDE || p.status === PaperStatus.FULLTEXT_EXCLUDE).length, color: 'text-rose-600', bg: 'bg-rose-50', icon: 'M6 18L18 6M6 6l12 12' },
                 { label: 'Maybe', value: PaperStatus.MAYBE, count: papers.filter(p => p.status === PaperStatus.MAYBE).length, color: 'text-amber-600', bg: 'bg-amber-50', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
                 { label: 'Undecided', value: PaperStatus.PENDING, count: papers.filter(p => p.status === PaperStatus.PENDING).length, color: 'text-slate-500', bg: 'bg-slate-100', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
               ].map(opt => (
@@ -543,18 +549,18 @@ const App: React.FC = () => {
                         <div 
                            key={paper.id} 
                            onClick={() => setSelectedPaperId(paper.id)}
-                           className={`p-4 border-b border-slate-100 cursor-pointer transition-all flex gap-3 group ${
+                           className={`p-4 border-b border-slate-100 cursor-pointer transition-all flex gap-3 group/item relative ${
                               selectedPaperId === paper.id ? 'bg-blue-50/70 border-l-4 border-l-vnu-blue ring-1 ring-inset ring-vnu-blue/10' : 'hover:bg-slate-50 border-l-4 border-l-transparent'
                            }`}
                         >
                            <div className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ring-4 ${
-                              paper.status === PaperStatus.ABSTRACT_INCLUDE ? 'bg-emerald-500 ring-emerald-50' :
-                              paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'bg-rose-500 ring-rose-50' :
+                              (paper.status === PaperStatus.ABSTRACT_INCLUDE || paper.status === PaperStatus.FULLTEXT_INCLUDE || paper.status === PaperStatus.EXTRACTED) ? 'bg-emerald-500 ring-emerald-50' :
+                              (paper.status === PaperStatus.ABSTRACT_EXCLUDE || paper.status === PaperStatus.FULLTEXT_EXCLUDE) ? 'bg-rose-500 ring-rose-50' :
                               paper.status === PaperStatus.MAYBE ? 'bg-amber-500 ring-amber-50' : 'bg-slate-300 ring-slate-50'
                            }`}></div>
-                           <div className="flex-1 pr-2">
+                           <div className="flex-1 pr-8">
                               <h4 className={`text-[13px] font-bold line-clamp-2 leading-snug mb-2 transition-colors ${
-                                 selectedPaperId === paper.id ? 'text-vnu-blue' : 'text-slate-800 group-hover:text-vnu-blue'
+                                 selectedPaperId === paper.id ? 'text-vnu-blue' : 'text-slate-800 group-hover/item:text-vnu-blue'
                               }`}>{paper.title}</h4>
                               <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                                  <span className="truncate max-w-[150px]">{paper.authors?.split(',')[0]}</span>
@@ -566,6 +572,16 @@ const App: React.FC = () => {
                                 </div>
                               )}
                            </div>
+                           {/* Delete button — appears on hover */}
+                           <button
+                             onClick={(e) => handleRemovePaper(paper.id, e)}
+                             title="Remove paper"
+                             className="absolute top-3 right-3 opacity-0 group-hover/item:opacity-100 transition-all p-1.5 rounded-lg bg-white border border-slate-200 text-slate-400 hover:bg-rose-500 hover:text-white hover:border-rose-500 shadow-sm"
+                           >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                             </svg>
+                           </button>
                         </div>
                      ))}
                      {paginatedPapers.length === 0 && (
@@ -589,21 +605,21 @@ const App: React.FC = () => {
                         return (
                            <>
                               {/* Action Bar (Sticky) */}
-                              <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-200 p-4 z-10 flex gap-4 justify-center">
+                              <div className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-slate-200 p-4 z-10 flex gap-3 justify-center items-stretch">
                                  <button 
                                     onClick={() => updatePaperStatus(paper.id, PaperStatus.ABSTRACT_INCLUDE)}
-                                    className={`relative flex flex-col items-center justify-center w-full max-w-[140px] px-2 py-3 rounded-xl transition-all border ${
-                                       paper.status === PaperStatus.ABSTRACT_INCLUDE ? 'bg-emerald-600 border-emerald-600 text-white shadow-xl shadow-emerald-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600'
+                                    className={`relative flex flex-col items-center justify-center w-full max-w-[130px] px-2 py-3 rounded-xl transition-all border ${
+                                       (paper.status === PaperStatus.ABSTRACT_INCLUDE || paper.status === PaperStatus.FULLTEXT_INCLUDE || paper.status === PaperStatus.EXTRACTED) ? 'bg-emerald-600 border-emerald-600 text-white shadow-xl shadow-emerald-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-500 hover:text-emerald-600'
                                     }`}
                                  >
                                     <span className="font-black uppercase tracking-widest text-sm mb-1 z-10 relative">Include</span>
-                                    <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.ABSTRACT_INCLUDE ? 'text-emerald-200' : 'text-slate-400'}`}>Shortcut: I</span>
-                                    {paper.status === PaperStatus.ABSTRACT_INCLUDE && <div className="absolute inset-0 bg-white/20 blur-sm rounded-xl"></div>}
+                                    <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.ABSTRACT_INCLUDE || paper.status === PaperStatus.FULLTEXT_INCLUDE || paper.status === PaperStatus.EXTRACTED ? 'text-emerald-200' : 'text-slate-400'}`}>Shortcut: I</span>
+                                    {(paper.status === PaperStatus.ABSTRACT_INCLUDE || paper.status === PaperStatus.FULLTEXT_INCLUDE || paper.status === PaperStatus.EXTRACTED) && <div className="absolute inset-0 bg-white/20 blur-sm rounded-xl"></div>}
                                  </button>
                                  
                                  <button 
                                     onClick={() => updatePaperStatus(paper.id, PaperStatus.MAYBE)}
-                                    className={`relative flex flex-col items-center justify-center w-full max-w-[140px] px-2 py-3 rounded-xl transition-all border ${
+                                    className={`relative flex flex-col items-center justify-center w-full max-w-[130px] px-2 py-3 rounded-xl transition-all border ${
                                        paper.status === PaperStatus.MAYBE ? 'bg-amber-500 border-amber-500 text-white shadow-xl shadow-amber-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-500 hover:text-amber-600'
                                     }`}
                                  >
@@ -611,17 +627,29 @@ const App: React.FC = () => {
                                     <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.MAYBE ? 'text-amber-100' : 'text-slate-400'}`}>Shortcut: M</span>
                                  </button>
 
-                                 <button
-                                    onClick={() => handleExclude(paper.id, PaperStatus.ABSTRACT_EXCLUDE)}
-                                    className={`relative flex flex-col items-center justify-center w-full max-w-[140px] px-2 py-3 rounded-xl transition-all border ${
-                                       paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'bg-rose-600 border-rose-600 text-white shadow-xl shadow-rose-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-rose-500 hover:text-rose-600'
+                                 <button 
+                                    onClick={() => handleExclude(paper.id, paper.status === PaperStatus.ABSTRACT_INCLUDE || paper.status === PaperStatus.FULLTEXT_EXCLUDE ? PaperStatus.FULLTEXT_EXCLUDE : PaperStatus.ABSTRACT_EXCLUDE)}
+                                    className={`relative flex flex-col items-center justify-center w-full max-w-[130px] px-2 py-3 rounded-xl transition-all border ${
+                                       (paper.status === PaperStatus.ABSTRACT_EXCLUDE || paper.status === PaperStatus.FULLTEXT_EXCLUDE) ? 'bg-rose-600 border-rose-600 text-white shadow-xl shadow-rose-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-rose-500 hover:text-rose-600'
                                     }`}
                                  >
                                     <span className="font-black uppercase tracking-widest text-sm mb-1 z-10 relative">Exclude</span>
-                                    <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'text-rose-200' : 'text-slate-400'}`}>Shortcut: E</span>
-                                    {paper.exclusionReason && paper.status === PaperStatus.ABSTRACT_EXCLUDE && (
+                                    <span className={`text-[10px] font-bold z-10 relative ${(paper.status === PaperStatus.ABSTRACT_EXCLUDE || paper.status === PaperStatus.FULLTEXT_EXCLUDE) ? 'text-rose-200' : 'text-slate-400'}`}>Shortcut: E</span>
+                                    {paper.exclusionReason && (paper.status === PaperStatus.ABSTRACT_EXCLUDE || paper.status === PaperStatus.FULLTEXT_EXCLUDE) && (
                                       <span className="text-[9px] italic text-rose-100 truncate w-full text-center px-1 z-10 relative">{paper.exclusionReason}</span>
                                     )}
+                                 </button>
+
+                                 {/* Delete button in detail panel */}
+                                 <button
+                                    onClick={(e) => handleRemovePaper(paper.id, e)}
+                                    title="Remove this paper from the review"
+                                    className="flex flex-col items-center justify-center px-4 py-3 rounded-xl border border-slate-200 text-slate-400 hover:bg-rose-600 hover:text-white hover:border-rose-600 hover:shadow-xl hover:shadow-rose-200 transition-all shrink-0"
+                                 >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Delete</span>
                                  </button>
                               </div>
 
