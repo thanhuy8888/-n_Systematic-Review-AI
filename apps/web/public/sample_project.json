@@ -1,0 +1,123 @@
+{
+  "papers": [
+    {
+      "id": "5e56ade5a2d4",
+      "title": "Insulin resistance alters cortical inhibitory neurons and microglia to exacerbate Alzheimer's knock-in mouse phenotypes.",
+      "abstract": "Metabolic dysfunction contributes to the risk and progression of Alzheimer's disease (AD) through insulin signaling, but the cellular mechanisms are not fully understood. In this study, we examined the effects of streptozotocin-induced insulin deficiency or a high-fat, high-sugar (HFHS) diet-induced insulin resistance on cognitive function in knock-in AD mouse models expressing human mutant APP and wild-type tau. Both metabolic perturbations caused hyperglycemia, but only the HFHS diet resulted in weight gain and greater learning and memory deficits. The HFHS diet exacerbation occurred without changes in amyloid-β or phospho-tau accumulation and with only subtle alterations in microglial morphology. The basis for functional deficits was explored with single-nucleus transcriptomic analysis. Prominent gene expression changes in glial cells and cerebral cortex Layer 2 inhibitory neurons correlated with the enhanced behavioral deficits. In HFHS-fed AD mice, we observed a shared metabolic impairment in neurodegeneration (MinD) state across multiple glial cell types. Additionally, the HFHS diet, with or without AD pathology, induced selective upregulation of the transcription factor Meis2 in cortical Layer 2 inhibitory neurons, in association with pathways involved in cell excitability. Overall, these findings suggest that HFHS-driven metabolic stress affects brain function and behavior through specific cellular programs distinct from amyloid or tau pathology, and identifies new targets that link diet-induced metabolic stress to cognitive decline in AD.",
+      "authors": "Nicholson L, Tang SJ, Karra T, Abouelatta H, Strittmatter SM",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1101/2025.09.05.674487",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "952c3c6fce7f",
+      "title": "Immune cells regulate circulating adipocyte extracellular vesicle levels in response to metabolic shifts.",
+      "abstract": "Extracellular vesicles (EVs) are now recognized as potent mediators of intercellular and inter-organ signaling and implicated in the pathogenesis of obesity and its associated comorbidities such as diabetes, cancer, cardiovascular disease, and neurodegeneration. Despite a surge of new functional information about EVs, we still lack a basic understanding of how endogenous EV levels are controlled to regulate inter-organ signaling. New flow cytometry technology has allowed us to study the regulation of circulating, endogenous EVs from metabolically relevant cell types like adipocytes. From this, we provide evidence for a paradigm of EV regulation where tissue resident immune cells, predominantly macrophages, clear EVs released by local tissue cells or EVs entering the tissue from circulation, an activity that determines circulating EV levels. In obesity, EV uptake by adipose tissue immune cells is reduced, concomitant with increased circulating adipocyte-specific EVs (adipoEVs) and reduced EV clearance rates. AdipoEVs are significantly elevated in mouse circulation from one day to 20 weeks of high-fat feeding. In humans we found that adipocyte EV levels negatively correlate with whole-body and liver insulin sensitivity and are not associated with adipose mass. This work suggests that tissue resident immune cells act as a gatekeeper for tissue EV entry into circulation and are thereby a major regulator of inter-organ EV signaling.",
+      "authors": "Tiash S, Russo M, Pai YL, Jia W, Field RL, Pietka T, Abumrad NA, Smith GI, Samovski D, Klein S, Brestoff JR, Crewe C",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1101/2025.07.11.664236",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "cb4b7855e996",
+      "title": "Urinary Signatures Predict Calorie Restriction-Mediated Weight Loss in Obese Diversity Outbred Mice.",
+      "abstract": "Predictive analytics encompassing metabolomic profiles are increasingly being used to forecast responders to dietary interventions. Advances using this approach are particularly needed to personalize and enhance the effectiveness of dietary weight loss interventions. Using obese Diversity Outbred (DO) mice that model genetic and phenotypic heterogeneity of human populations, we aimed to identify urinary metabolite signatures predictive of responsiveness to calorie restriction (CR)-mediated weight loss. DO mice (150 males, 150 females) were fed a high-fat diet for 12 weeks to induce obesity, then urine was collected and an 8-week CR regimen (30% decrease in energy intake) initiated. At study completion, mice were rank-ordered according to their percent body weight change, with mice in the extreme quartiles deemed CR responders (n=67) versus nonresponders (n=67). Targeted semi-quantitative metabolomics identified elevated glutamic acid and hydroxyproline as key urinary metabolites that distinguish CR responders from CR nonresponders, independent of sex. Three urinary metabolites (glutamic acid, hydroxyproline, and putrescine) distinguished male CR responders from nonresponders. Six metabolites (glutamic acid, hydroxyproline, dopamine, histamine, lysine, and spermine) distinguished female CR responders from nonresponders. Multivariate receiver operating characteristic analyses integrated the common metabolites and sex-specific metabolites to reveal moderate (males) to robust (females, males plus females) prediction models of CR-mediated weight loss. Further, pathway analysis identified several metabolic pathways, including arginine and proline metabolism, and alanine, aspartate, and glutamate biosynthesis, that distinguished CR responders from nonresponders and could be indicative of metabolic reprogramming to enhance insulin sensitivity and energy metabolism.",
+      "authors": "Paules EM, Trujillo-Gonzalez I, VerHague M, Albright J, Stewart D, Sumner SJ, McRitchie SL, Kirchner D, Coleman MF, Bennett BJ, Howard AG, Gordon-Larsen P, French JE, Hursting SD",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1101/2025.07.18.665483",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "2839ae5c0730",
+      "title": "Mouse Model of Metabolic Dysfunction-Associated Steatotic Liver Disease with Fibrosis.",
+      "abstract": "Liver fibrosis is the most important predictor of adverse outcomes in metabolic dysfunction-associated steatotic liver disease (MASLD). In pre-clinical studies of MASLD, mice are the most commonly used disease model. However, in those models, liver fibrosis is difficult to induce. This protocol describes a mouse model of MASLD in which hyperphagic Ay mice are fed a diet that is high in fat and fructose, which resembles the average diet in the US. The mice develop hepatic steatosis, injury, inflammation, and fibrosis. Fibrosis progresses from pericellular, stage 1 fibrosis after 16 weeks, to bridging, stage 3 fibrosis after 12 months. These mice also develop obesity, hypertriglyceridemia, glucose intolerance, and hyperinsulinemia. This disease model replicates the liver histopathology, the hepatic gene expression alterations, and the metabolic dysfunction of the human disease. This protocol includes two methods to quantify fibrosis: histological staining of collagen by picro-sirius red, and quantification of the liver content of hydroxyproline. These methods can be used for the study of MASLD pathophysiology and for preclinical studies of potential therapies.",
+      "authors": "Khoj D, Huang R, Altvater E, Ishfaq ZN, Jiang X, Axen KV, Caviglia JM",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.3791/68294",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "6cc6a2aab54d",
+      "title": "Pharmacological inhibition of G protein-coupled receptor kinase 5 decreases high-fat diet-induced hepatic steatosis in mice.",
+      "abstract": "G protein-coupled receptor kinase 5 (GRK5) is implicated in the pathogenesis of obesity in both humans and rodent models. Our previous work demonstrated that genetic deletion or pharmacological inhibition of GRK5 suppresses 3T3-L1 adipocyte differentiation. Here, we assessed the small-molecule GRK5 inhibitor, GRK5-IN-2, for its effects on metabolic tissues and therapeutic potential in a diet-induced obesity mouse model. Mice were fed a high-fat diet for 8 weeks to induce obesity, followed by continued a high-fat diet with oral administration of GRK5-IN-2 (25 or 50 mg/kg) or water vehicle, five days per week for an additional 16 weeks. GRK5-IN-2 treatment had no effect on body weight, fat/lean mass, insulin tolerance, food intake, or energy expenditure but significantly reduced hepatic triglyceride accumulation and de novo lipogenesis. A follow-up study using 25 mg/kg of GRK5-IN-2 confirmed no effect on adiposity but reduced hepatic triglycerides. GRK5-IN-2 treatment decreased expression of the lipogenic gene Acc2 while upregulating lipid utilization proteins COXIV and ACSL1 in the liver, likely contributing to lower triglyceride levels. Together, these findings suggest that GRK5 inhibition selectively modulates hepatic lipid metabolism without altering systemic metabolic parameters, highlighting GRK5 as a potential therapeutic target for fatty liver disease.",
+      "authors": "Seramur ME, Sink S, Reeves TE, Solberg Woods LC, Key CC",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1101/2025.06.25.661655",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "7c9b7dce4b22",
+      "title": "Epigenetic Programming of Estrogen Receptor in Adipose Tissue by High Fat Diet Regulates Obesity-Induced Inflammation.",
+      "abstract": "Adipose inflammation plays a key role in obesity-induced metabolic abnormalities. Epigenetic regulation, including DNA methylation, is a molecular link between environmental factors and complex diseases. Here we found that high fat diet (HFD) feeding induced a dynamic change of DNA methylome in mouse white adipose tissue (WAT) analyzed by reduced representative bisulfite sequencing. Interestingly, DNA methylation at the promoter of estrogen receptor α (Esr1) was significantly increased by HFD, concomitant with a down-regulation of Esr1 expression. HFD feeding in mice increased the expression of DNA methyltransferase 1 (Dnmt1) and Dnmt3a, and binding of DNMT1 and DNMT3a to Esr1 promoter in WAT. Mice with adipocyte-specific Dnmt1 deficiency displayed increased Esr1 expression, decreased adipose inflammation and improved insulin sensitivity upon HFD challenge; while mice with adipocyte-specific Dnmt3a deficiency showed a mild metabolic phenotype. Using a modified CRISPR/RNA-guided system to specifically target DNA methylation at the Esr1 promoter in WAT, we found that reducing DNA methylation at Esr1 promoter increased Esr1 expression, decreased adipose inflammation and improved insulin sensitivity in HFD-challenged mice. Our study demonstrates that DNA methylation at Esr1 promoter plays an important role in regulating adipose inflammation, which may contribute to obesity-induced insulin resistance.",
+      "authors": "Wu R, Li F, Wang S, Jing J, Cui X, Huang Y, Zhang X, Carrillo JA, Ding Z, Song J, Yu L, Shi H, Xue B, Shi H",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1101/2025.06.21.660886",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "03db229590a2",
+      "title": "In C57Bl6 Mice, Obesity and Subsequent Weight Loss Negatively Affected the Skeleton and Shifted the Cortical Bone Metabolome.",
+      "abstract": "Obesity and calorie restriction each negatively affect skeletal health. Despite the negative effects of weight loss on the skeleton, obese patients are advised to lose weight via calorie restriction. Additionally, obesity and weight loss individually alter both whole-body and local metabolism. Little is known about bone quality and changes to the cortical metabolome following calorie restriction in obese preclinical models. We hypothesized that caloric restriction would worsen bone quality in obese mice by shifting the cortical bone metabolome. To induce obesity, 8-week-old male and female C57BL6/J mice received 60% high-fat diet for 12 weeks. From 20 to 30 weeks of age, mice either remained obese or lost weight through 30% caloric restriction. Control animals received a 10% low-fat diet. Bodyweight and fat mass were increased by obesity and decreased with calorie restriction. Similarly, glucose and insulin tolerance were worsened with obesity but improved by weight loss. Compared to obesity, calorie restriction elicited more bone loss in both cortical and trabecular compartments. Weight loss also reduced bone formation. Both obesity and subsequent calorie restriction altered the cortical bone metabolome in a sex-dependent manner. Metabolic pathways altered with diet generally mapped to amino acid or fatty acid metabolism. In males, weight loss was associated with a downregulation of pathways related to tryptophan, tyrosine, ubiquinone, and fatty acids. In females, calorie restriction downregulated taurine and hypotaurine metabolism but upregulated pyrimidine metabolism, nicotinate and nicotinamide metabolism, and pantothenate and CoA biosynthesis. Our findings highlight the negative effects of obesity and subsequent caloric restriction on the skeleton. Despite improvements in components of systemic metabolism, caloric restriction in obese preclinical models did not restore bone morphology or the cortical metabolome to control conditions.",
+      "authors": "Chlebek C, McAndrews C, Aaronson B, Welhaven HD, Yu K, Costa SN, Shaver J, Silvia S, DeMambro V, June RK, McGee-Lawrence ME, Rosen CJ",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1101/2025.05.09.653133",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "bf668b1bd079",
+      "title": "Finerenone ameliorates high-fat-induced myocardial lipotoxicity by suppressing ferroptosis through augmenting the system Xc(-)/GSH synthesis pathway.",
+      "abstract": "Obesity cardiomyopathy (OCM) is a distinct clinical entity in cardiovascular disease, yet targeted therapeutic options are scarce. Finerenone, a novel nonsteroidal mineralocorticoid receptor antagonist, has shown cardioprotective effects, but its role in mitigating OCM lipotoxicity is unclear. To elucidate the underlying functions and mechanisms, rats were fed on an HFD for 16 weeks to establish the OCM model. At the 12th week of HFD, the OCM rats were administered 10 mg/kg finerenone for 4 weeks. Cardiac ultrasound, glycolipid metabolism, lipid deposition, histopathology, and oxidative stress were evaluated in rats to elucidate the effects of finerenone on myocardial lipotoxic injury phenotype in relation to cardiac function and structure. Additionally, we identified potential mechanisms by which finerenone ameliorates lipotoxicity using cardiac tissue's RNA sequencing technology and bioinformatics analyses. Furthermore, the efficacy and underlying mechanisms of finerenone were validated using an in vitro cardiomyocyte model of lipotoxic injury induced by high palmitate stimulation in H9C2 cells. Finerenone treatment did not affect body weight or insulin resistance but significantly ameliorated cardiac hypertrophy, diastolic dysfunction, and myocardial lipotoxicity in HFD-induced obese rats. Transcriptome analyses revealed that finerenone significantly suppressed the ferroptosis pathway in the hearts of HFD-treated rats. Further studies demonstrated that finerenone attenuated ferroptosis by activating the System Xc(-) transporter, enhancing cellular cystine uptake, promoting intracellular glutathione (GSH) synthesis, and thus restoring redox balance in cardiomyocytes. Finerenone alleviates myocardial lipotoxicity in HFD-induced obese rats by inhibiting ferroptosis through the regulation of the System Xc(-)/GSH axis. Finerenone may prove an effective treatment for OCM.",
+      "authors": "Xu Z, Li X, Long Y, He A, Zou Z, Wang G, Xia Y, Luo S",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1016/j.bbadis.2025.167968",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "11edd061fda8",
+      "title": "Improved physical performance in obesity-resistant rats compared to obesity-prone rats: Effects of different diets and metabolic analysis.",
+      "abstract": "Animal models, such as high-fat diet-induced obese (DIO) rats, have been used to understand its pathophysiology. These models reveal differences between obesity-prone (OP) and obesity-resistant (OR) phenotypes. Thus, OR exhibit lower body mass gain and higher levels of physical activity, suggesting a more efficient energy metabolism. This study evaluated the metabolic adaptations and physical performance of OP and OR rats. Wistar rats (30 days old) were subjected to 23-week obesity exposure protocols. Initially, rats were randomized into two groups: a) SD: fed a standard diet (n = 39) and b) HFD: fed a high-fat diet (n = 39). Subsequently, animals were characterized as OP and OR on their respective diets: SD-OR (n = 13); SD-OP (n = 13); HFD-OP (n = 13); HFD-OR (n = 13). Nutritional, metabolic, and adiposity parameters were analyzed. Basal metabolism assessment was performed using indirect calorimetry. Physical performance and aerobic capacity were determined through treadmill exercise tests with gas analyzers for maximal oxygen consumption (VO2). OR animals had lower body mass compared to OP animals, despite consuming the same caloric intake under both diets. HFD-OP rats gained 30.5% more weight than HFD-OR rats, while SD-OP rats gained 19.5% more than SD-OR rats. SD-OR rats gained 20.5% more weight than HFD-OR. No significant differences in adiposity indices were observed among groups. HFD-OR rats showed 15.6% higher VO₂max than HFD-OP rats; SD-OR rats had 12.8% higher VO₂max and 20.3% longer time to exhaustion compared to SD-OP rats. Indirect calorimetry revealed higher energy expenditure in OR animals during the dark cycle. OP animals exhibited elevated insulin and HOMA-IR levels, while OR animals had higher leptin and glucagon levels. In conclusion, OR rats showed improved physical performance and aerobic capacity compared to OP rats, even on a high-fat diet, suggesting that OR rats have adaptive mechanisms that enhance energy metabolism and endurance.",
+      "authors": "da Silva DS, Dos Santos MC, Domingos LF, Cordeiro JP, Miranda K, Siqueira Tavares MG, Santos KCC, Lima-Leopoldo AP, Soares Leopoldo A",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1371/journal.pone.0327670",
+      "keywords": [],
+      "status": "PENDING"
+    },
+    {
+      "id": "db90339db9e5",
+      "title": "A Temporal Single-Cell Multi-Omics Atlas of Murine Pancreatic Islet Remodeling During Hyperglycaemia Progression.",
+      "abstract": "Pancreatic islets undergo coordinated cellular remodeling during obesity-induced insulin resistance (IR). However, the associated molecular changes across endocrine and non-endocrine compartments remain largely unexplored. Here, using longitudinal single-cell RNA sequencing (scRNA-seq) and single-cell ATAC sequencing (scATAC-seq) on islets from C57BL/6 mice subjected to high-fat diet (HFD) feeding for 8, 16, and 24 weeks, along with age-matched controls on regular chow, we mapped dynamic changes in islet cell composition and transcriptional states. Beta cells demonstrated pronounced stress-induced reprogramming, with the emergence of proliferative and dysfunctional subsets. Alpha and delta cell fractions declined under HFD, despite increased polyhormonal biosynthesis, suggesting functional rather than numerical adaptation. Immune profiling showed robust expansion of proinflammatory M1 macrophages and upregulation of NF-κB and chemotaxis pathways, particularly at 16 weeks. Notably, cell-cell communication analyses revealed diet-specific disruption in signaling networks. Under HFD conditions, intercellular communication among beta cells, macrophages, and delta cells was markedly altered, leading to the disruption of key signaling pathways such as the gastric inhibitory polypeptide receptor (GIPR) and major histocompatibility complex-I (MHC-I). Notably, C-C motif chemokine ligand 27A ( Ccl27a ) expression and chromatin accessibility were significantly altered in a distinct subpopulation of beta cells under HFD condition, indicative of a niche-specific regulatory mechanism. Integration with human islet datasets from obese and type 2 diabetes (T2D) donors confirmed conserved shifts in beta cell identity and immune activation. This study presents a comprehensive high-resolution atlas of islet remodeling under metabolic stress, identifying key communication nodes and transcriptional programs pertinent to T2D pathogenesis.",
+      "authors": "Singh S, Pavan MK, Barella LF, Telang J, Shree A, Agarwal S, Goel A, Thaleshwari S, Wess J, Zafar H, Pydi SP",
+      "year": "2025",
+      "journal": "",
+      "doi": "10.1101/2025.05.29.656754",
+      "keywords": [],
+      "status": "PENDING"
+    }
+  ],
+  "criteria": {
+    "population": "In vivo mice or murine models (e.g. C57BL/6, ob/ob, db/db)",
+    "intervention": "High fat diet HFD, high sugar diet HFHS, high cholesterol diet HCD, Western diet",
+    "comparison": "Control group receiving standard chow or purified low fat diet",
+    "outcome": "Metabolic outcomes: body weight, TC, TG, LDL, HDL, glucose, insulin, HOMA-IR, ALT, AST, liver steatosis",
+    "studyType": "In vivo preclinical animal study with dietary intervention"
+  },
+  "version": "1.0",
+  "exportDate": "2026-06-04T09:00:00.000Z"
+}

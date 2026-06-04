@@ -30,14 +30,38 @@ export interface Paper {
   aiScreeningReason?: string;
   extractionData?: ExtractionData;
   sourceFile?: string;
+  exclusionReason?: string;
 }
 
+/** Evidence table fields for murine metabolic disorder studies (PICO-aligned) */
 export interface ExtractionData {
+  // Study design
   methodology: string;
   sampleSize: string;
+  // Population (mouse model)
+  mouseStrain: string;
+  sexAge: string;
+  // Intervention
+  dietType: string;
+  dietComposition: string;
+  duration: string;
+  // Comparator
+  controlDiet: string;
+  // Outcomes — lipid profile
+  tcTg: string;
+  ldlHdl: string;
+  // Outcomes — glucose/insulin axis
+  glucoseInsulin: string;
+  homaIr: string;
+  // Outcomes — liver
+  altAst: string;
+  liverHistology: string;
+  // Summary
   keyFindings: string;
   limitations: string;
   riskOfBias: string;
+  // Evidence traceability: raw text span supporting the finding
+  evidenceSpan?: string;
 }
 
 export interface ReviewCriteria {

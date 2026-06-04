@@ -47,6 +47,33 @@ class ReviewAction(Base):
     model_version = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+class Extraction(Base):
+    """
+    Stores structured QA extraction results per paper, with per-field
+    confidence scores and a human review flag. Enables the
+    human-in-the-loop workflow recommended in Chapter 4 §1.2.
+
+    One row per (paper, field). `value` is what the system currently
+    believes (AI extraction OR human-corrected value, whichever is newer).
+    """
+    __tablename__ = 'extractions'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    paper_id = Column(String, ForeignKey('papers.paper_id'), index=True)
+    field = Column(String, index=True)        # e.g. 'mouseStrain'
+    value = Column(Text)                       # current best value
+    ai_value = Column(Text)                    # original model output
+    confidence = Column(Float)                 # 0..1 from QA model
+    evidence_section = Column(String)          # which IMRaD section it came from
+    evidence_span = Column(Text)               # supporting text snippet
+    model_version = Column(String)
+    status = Column(String, default="pending") # pending, accepted, corrected, rejected
+    reviewer_id = Column(String)
+    reviewer_comment = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_at = Column(DateTime)
+
+
 class Cluster(Base):
     __tablename__ = 'clusters'
     

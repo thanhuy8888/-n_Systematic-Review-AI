@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from apps.api.database import init_db
-from apps.api.routers import upload, screening
+from apps.api.routers import upload, screening, review
 
 init_db()
 
@@ -19,6 +19,7 @@ app.add_middleware(
 # Include routers
 app.include_router(upload.router)
 app.include_router(screening.router)
+app.include_router(review.router)
 
 @app.get("/")
 def read_root():

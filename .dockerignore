@@ -1,0 +1,34 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node
+apps/web/node_modules/
+apps/web/dist/
+
+# Dev artifacts
+.git/
+*.bat
+*.sh
+experiments/
+Document/
+"Demo web"/
+
+# Sensitive
+.env
+.env.*
+*.key
+
+# Data (use Docker volumes instead)
+data/raw/*
+data/processed/*
+data/uploads/*
+sr_data.db
+
+# Large files
+*.pt
+*.bin
+*.safetensors

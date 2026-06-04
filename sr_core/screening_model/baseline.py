@@ -96,10 +96,11 @@ class BaselineModel:
         print(f"ROC-AUC = {auc:.4f}")
         print(f"PR-AUC  = {pr_auc:.4f} (Crucial for Systematic Reviews)")
         
-        try:
-            self.plot_results(y_test, y_pred, y_prob)
-        except Exception as e:
-            print(f"Warning: Failed to generate plots: {e}")
+        # Commented out to avoid duplicate baseline charts in results (per user request)
+        # try:
+        #     self.plot_results(y_test, y_pred, y_prob)
+        # except Exception as e:
+        #     print(f"Warning: Failed to generate plots: {e}")
         
         return {
             "auc": auc,
@@ -122,7 +123,7 @@ class BaselineModel:
         plt.ylabel('True Label')
         plt.xlabel('Predicted Label')
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, "confusion_matrix.png"))
+        plt.savefig(os.path.join(output_dir, "baseline_confusion_matrix.png"))
         plt.close()
         
         # 2. ROC Curve
@@ -137,7 +138,7 @@ class BaselineModel:
         plt.title('Receiver Operating Characteristic (ROC) Curve')
         plt.legend(loc="lower right")
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, "roc_curve.png"))
+        plt.savefig(os.path.join(output_dir, "baseline_roc_curve.png"))
         plt.close()
         
         # 3. Precision-Recall Curve
@@ -149,7 +150,7 @@ class BaselineModel:
         plt.title('Precision-Recall Curve')
         plt.legend(loc="lower left")
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, "pr_curve.png"))
+        plt.savefig(os.path.join(output_dir, "baseline_pr_curve.png"))
         plt.close()
         
         print(f"Plots have been successfully saved to '{output_dir}'")

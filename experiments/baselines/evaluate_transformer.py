@@ -40,7 +40,7 @@ def plot_results(y_test, y_pred, y_prob):
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "confusion_matrix.png"))
+    plt.savefig(os.path.join(output_dir, "transformer_confusion_matrix.png"))
     plt.close()
     
     # 2. ROC Curve
@@ -55,7 +55,7 @@ def plot_results(y_test, y_pred, y_prob):
     plt.title('ROC Curve (Transformer + XGBoost)')
     plt.legend(loc="lower right")
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "roc_curve.png"))
+    plt.savefig(os.path.join(output_dir, "transformer_roc_curve.png"))
     plt.close()
     
     # 3. Precision-Recall Curve
@@ -67,7 +67,7 @@ def plot_results(y_test, y_pred, y_prob):
     plt.title('Precision-Recall Curve (Transformer + XGB)')
     plt.legend(loc="lower left")
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "pr_curve.png"))
+    plt.savefig(os.path.join(output_dir, "transformer_pr_curve.png"))
     plt.close()
     
     # 4. Probability Distribution (Mức độ Tự tin của AI - Quan trọng cho Hội đồng)
@@ -80,42 +80,7 @@ def plot_results(y_test, y_pred, y_prob):
     plt.ylabel('Density')
     plt.legend()
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "probability_distribution.png"))
-    plt.close()
-    
-    # 5. Radar Chart (Tổng quan Sức mạnh AI)
-    # Tính toán các chỉ số cơ bản để vẽ Radar
-    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-    acc = accuracy_score(y_test, y_pred)
-    prec = precision_score(y_test, y_pred)
-    rec = recall_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred)
-    roc = roc_auc_score(y_test, y_prob)
-    
-    categories = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC']
-    values = [acc, prec, rec, f1, roc]
-    
-    # Số vòng
-    N = len(categories)
-    angles = [n / float(N) * 2 * np.pi for n in range(N)]
-    values += values[:1]
-    angles += angles[:1]
-    
-    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-    ax.set_theta_offset(np.pi / 2)
-    ax.set_theta_direction(-1)
-    
-    plt.xticks(angles[:-1], categories, size=10)
-    ax.set_rlabel_position(0)
-    plt.yticks([0.2, 0.4, 0.6, 0.8, 1.0], ["0.2", "0.4", "0.6", "0.8", "1.0"], color="grey", size=8)
-    plt.ylim(0, 1.05)
-    
-    ax.plot(angles, values, linewidth=2, linestyle='solid', color='darkmagenta')
-    ax.fill(angles, values, 'magenta', alpha=0.25)
-    plt.title('Radar Chart: Overall AI Capability', size=14, y=1.1)
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, "radar_chart_metrics.png"))
+    plt.savefig(os.path.join(output_dir, "transformer_probability_distribution.png"))
     plt.close()
     
     print(f"Plots have been successfully saved to '{output_dir}'")
@@ -217,10 +182,18 @@ if __name__ == "__main__":
     plot_results(y_report, y_pred, y_prob)
     
     # ---- LƯU MÔ HÌNH (MODEL PERSISTENCE) ----
+    # Production inference in sr_core/screening_model/transformer_screen.py
+    # requires BOTH the fitted classifier and the fitted TF-IDF vectorizer to
+    # rebuild the feature vector. Persist both side-by-side.
     model_dir = os.path.join("sr_core", "screening_model")
     os.makedirs(model_dir, exist_ok=True)
+
     model_path = os.path.join(model_dir, "hybrid_xgb_model.pkl")
+    vec_path = os.path.join(model_dir, "tfidf_vectorizer.pkl")
+
     joblib.dump(clf, model_path)
-    print(f"\n[Model Exported] Model successfully frozen and saved at: {model_path}")
-    
+    joblib.dump(vec, vec_path)
+
+    print(f"\n[Model Exported] Classifier saved at: {model_path}")
+    print(f"[Model Exported] TF-IDF vectorizer saved at: {vec_path}")
     print("\n[Done] Transformer-Supervised Hybrid evaluation complete.")

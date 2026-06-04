@@ -52,6 +52,10 @@ test_tuning_v2.py
 .DS_Store
 Thumbs.db
 
+# Local env (contains localhost URL for dev)
+.env.local
+apps/web/.env.local
+
 # Large models
 # *.pkl (Allowing our specific hybrid model)
 # (Note: I will add the hybrid_xgb_model.pkl specifically if it's small, but usually keep them out if they are large.

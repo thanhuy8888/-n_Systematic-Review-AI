@@ -5,6 +5,8 @@ pydantic
 transformers
 torch
 PyMuPDF
+pytesseract
+Pillow
 python-multipart
 rispy
 bibtexparser

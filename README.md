@@ -1,14 +1,14 @@
 # -n_Systematic-Review-AI
 Hệ thống AI được xây dựng để làm systematic reviews
 AI-Powered Systematic Review Platform
-This platform is a comprehensive AI-assisted tool designed to accelerate the Systematic Literature Review (SLR) process. It leverages an advanced local HuggingFace Transformer architecture to automate the screening of academic papers (abstract and full-text) based on custom PICO criteria, and extracts structured data using RoBERTa Extractive Question Answering.
+This platform is a comprehensive AI-assisted tool designed to accelerate the Systematic Literature Review (SLR) process. It uses a hybrid PubMedBERT + XGBoost classifier (with TF-IDF feature stacking and SMOTE class balancing) to screen academic papers (abstract and full-text) against custom PICO criteria, and extracts structured data using RoBERTa Extractive Question Answering.
 
 🚀 Features
 PDF Metadata Ingestion: Automatically extracts metadata (Title, Authors, Abstract, DOI) from uploaded PDF articles.
 Criteria-Aware Screening: Uses AI to screen abstracts and full-texts against your specific Research Protocol (PICO).
 Explainable AI (XAI): Provides transparent rationale and confidence scores for inclusion/exclusion decisions.
 Data Extraction: Automatically answers methodology, sample size, limitations, and risk of bias questions using Extractive QA on the paper content.
-Local Privacy: Runs SciBERT and RoBERTa-SQuAD2 models completely locally, ensuring data privacy and no reliance on paid API services like OpenAI.
+Local Privacy: Runs PubMedBERT, XGBoost, and RoBERTa-SQuAD2 models completely locally, ensuring data privacy and no reliance on paid API services like OpenAI.
 🗂️ Project Structure
 /
 ├── apps/
@@ -38,7 +38,7 @@ source venv/bin/activate
 
 # 3. Install the required Python packages
 pip install -r requirements.txt
-(Note: The first time you run the backend, it will automatically download the HuggingFace models allenai/scibert_scivocab_uncased and deepset/roberta-base-squad2. This requires internet access and ~1GB of disk space).
+(Note: The first time you run the backend, it will automatically download the HuggingFace models pritamdeka/S-PubMedBert-MS-MARCO and deepset/roberta-base-squad2. This requires internet access and ~1GB of disk space. To regenerate the hybrid screening classifier (`sr_core/screening_model/hybrid_xgb_model.pkl` and `tfidf_vectorizer.pkl`), run `python experiments/baselines/evaluate_transformer.py` against a labelled JSONL corpus.)
 
 3. Frontend Setup (React/Node.js)
 Open a new terminal, navigate to the apps/web directory:

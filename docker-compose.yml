@@ -1,0 +1,66 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  IS Systematic Review — Docker Compose
+#  Usage:  docker-compose up --build
+#  Access: http://localhost
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+
+  # ── 1. FastAPI Backend ────────────────────────────────────────────────────
+  backend:
+    image: sr_backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sr_backend
+    restart: unless-stopped
+    environment:
+      - PYTHONPATH=/app
+      - TRANSFORMERS_CACHE=/models_cache
+      - HF_HOME=/models_cache
+    volumes:
+      # ML models persist across rebuilds (download once, ~1 GB)
+      - models_cache:/models_cache
+      # SQLite database persists
+      - sr_database:/app/data
+    # Backend is internal — only the frontend nginx can reach it
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+    networks:
+      - sr_network
+
+  # ── 2. React Frontend (Nginx) ─────────────────────────────────────────────
+  frontend:
+    image: sr_frontend:latest
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: sr_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"          # http://localhost
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - sr_network
+
+# ── Persistent volumes ───────────────────────────────────────────────────────
+volumes:
+  models_cache:
+    name: sr_models_cache      # SciBERT + RoBERTa weights (~1 GB), persists forever
+  sr_database:
+    name: sr_database          # SQLite db + uploaded PDFs
+
+# ── Internal network ─────────────────────────────────────────────────────────
+networks:
+  sr_network:
+    driver: bridge

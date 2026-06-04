@@ -18,15 +18,18 @@ const App: React.FC = () => {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null);
   const [criteria, setCriteria] = useState<ReviewCriteria>({
-    population: 'Adults with hypertension',
-    intervention: 'Daily meditation practice',
-    comparison: 'No intervention',
-    outcome: 'Reduced blood pressure',
-    studyType: 'RCT or cohort studies'
+    population: 'In vivo mice or murine models (e.g. C57BL/6, ob/ob, db/db)',
+    intervention: 'High fat diet HFD, high sugar diet HFHS, high cholesterol diet HCD, Western diet',
+    comparison: 'Control group receiving standard chow or purified low fat diet',
+    outcome: 'Metabolic outcomes: body weight, TC, TG, LDL, HDL, glucose, insulin, HOMA-IR, ALT, AST, liver steatosis',
+    studyType: 'In vivo preclinical animal study with dietary intervention'
   });
 
   // Sidebar Filter States
   const [decisionFilter, setDecisionFilter] = useState<string>('ALL');
+  const [exclusionModal, setExclusionModal] = useState<{ paperId: string; status: PaperStatus } | null>(null);
+  const [exclusionReasonInput, setExclusionReasonInput] = useState('');
+  const [showPrismaFlow, setShowPrismaFlow] = useState<boolean>(false);
 
   useEffect(() => {
     loadProject().then(data => {
@@ -136,7 +139,7 @@ const App: React.FC = () => {
         goNext();
       } else if (e.key.toLowerCase() === 'e') {
         e.preventDefault();
-        updatePaperStatus(selectedPaperId!, PaperStatus.ABSTRACT_EXCLUDE);
+        handleExclude(selectedPaperId!, PaperStatus.ABSTRACT_EXCLUDE);
         goNext();
       } else if (e.key.toLowerCase() === 'm') {
         e.preventDefault();
@@ -149,8 +152,19 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeStage, selectedPaperId, filteredPapers, currentPage]);
 
-  const updatePaperStatus = (id: string, status: PaperStatus) => {
-    setPapers(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+  const updatePaperStatus = (id: string, status: PaperStatus, exclusionReason?: string) => {
+    setPapers(prev => prev.map(p => p.id === id ? { ...p, status, ...(exclusionReason !== undefined ? { exclusionReason } : {}) } : p));
+  };
+
+  const handleExclude = (id: string, status: PaperStatus) => {
+    setExclusionModal({ paperId: id, status });
+    setExclusionReasonInput('');
+  };
+
+  const confirmExclusion = () => {
+    if (!exclusionModal) return;
+    updatePaperStatus(exclusionModal.paperId, exclusionModal.status, exclusionReasonInput.trim() || 'Not specified');
+    setExclusionModal(null);
   };
 
   const handleRemovePaper = (id: string, e: React.MouseEvent) => {
@@ -236,6 +250,41 @@ const App: React.FC = () => {
     setIsProcessing(false);
   };
 
+  const handleExportEvidenceCSV = () => {
+    const included = papers.filter(p =>
+      p.status === PaperStatus.FULLTEXT_INCLUDE || p.status === PaperStatus.EXTRACTED
+    );
+    if (included.length === 0) {
+      alert('No included studies with extracted data to export.');
+      return;
+    }
+    const headers = [
+      'Title', 'Authors', 'Year', 'Journal', 'DOI', 'Status',
+      'Mouse Strain', 'Sex/Age', 'Diet Type', 'Diet Composition', 'Duration', 'Control Diet',
+      'TC/TG', 'LDL/HDL', 'Glucose/Insulin', 'HOMA-IR', 'ALT/AST', 'Liver Histology',
+      'Sample Size', 'Key Findings', 'Methodology', 'Limitations', 'Risk of Bias', 'Evidence Span'
+    ];
+    const escape = (v?: string) => `"${(v || '').replace(/"/g, '""')}"`;
+    const rows = included.map(p => [
+      escape(p.title), escape(p.authors), escape(p.year), escape(p.journal), escape(p.doi), p.status,
+      escape(p.extractionData?.mouseStrain), escape(p.extractionData?.sexAge),
+      escape(p.extractionData?.dietType), escape(p.extractionData?.dietComposition),
+      escape(p.extractionData?.duration), escape(p.extractionData?.controlDiet),
+      escape(p.extractionData?.tcTg), escape(p.extractionData?.ldlHdl),
+      escape(p.extractionData?.glucoseInsulin), escape(p.extractionData?.homaIr),
+      escape(p.extractionData?.altAst), escape(p.extractionData?.liverHistology),
+      escape(p.extractionData?.sampleSize), escape(p.extractionData?.keyFindings),
+      escape(p.extractionData?.methodology), escape(p.extractionData?.limitations),
+      escape(p.extractionData?.riskOfBias), escape(p.extractionData?.evidenceSpan),
+    ].join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'evidence_table.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleImportProject = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -253,6 +302,22 @@ const App: React.FC = () => {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleSeedDemoData = async () => {
+    try {
+      const response = await fetch('/sample_project.json');
+      if (!response.ok) throw new Error('Failed to fetch demo data');
+      const data = await response.json();
+      if (data.papers && data.criteria) {
+        setPapers(data.papers);
+        setCriteria(data.criteria);
+        setActiveStage(ReviewStage.ABSTRACT_SCREENING);
+        setCurrentPage(1);
+      }
+    } catch (err) {
+      alert("Error loading demo data: " + err);
+    }
   };
 
   return (
@@ -273,13 +338,13 @@ const App: React.FC = () => {
               {Object.values(ReviewStage).map((stage, idx) => (
                 <button
                   key={stage}
-                  onClick={() => { setActiveStage(stage); setCurrentPage(1); }}
+                  onClick={() => { setActiveStage(stage); setCurrentPage(1); setShowPrismaFlow(false); }}
                   className={`px-5 h-full text-[11px] uppercase tracking-wider font-bold transition-all relative ${
-                    activeStage === stage ? 'text-vnu-yellow' : 'text-blue-100 hover:text-white'
+                    !showPrismaFlow && activeStage === stage ? 'text-vnu-yellow' : 'text-blue-100 hover:text-white'
                   }`}
                 >
                   <span className="relative z-10">{stage}</span>
-                  {activeStage === stage && (
+                  {!showPrismaFlow && activeStage === stage && (
                     <div className="absolute bottom-0 left-0 w-full h-1 bg-vnu-yellow rounded-t-full shadow-[0_-2px_10px_rgba(253,184,19,0.5)]"></div>
                   )}
                 </button>
@@ -289,10 +354,12 @@ const App: React.FC = () => {
 
           <div className="flex items-center gap-4">
             <div className="flex bg-white/10 p-1 rounded-lg">
-              <button onClick={() => exportProjectFile(papers, criteria)} className="px-3 py-1 text-xs font-bold hover:bg-white/10 rounded">Export</button>
+              <button onClick={() => exportProjectFile(papers, criteria)} className="px-3 py-1 text-xs font-bold hover:bg-white/10 rounded">Export JSON</button>
+              <button onClick={handleExportEvidenceCSV} className="px-3 py-1 text-xs font-bold hover:bg-white/10 rounded text-vnu-yellow">Evidence CSV</button>
               <label className="px-3 py-1 text-xs font-bold hover:bg-white/10 rounded cursor-pointer">
                 Import <input type="file" className="hidden" accept=".json" onChange={handleImportProject} />
               </label>
+              <button onClick={handleSeedDemoData} className="px-3 py-1 text-xs font-bold hover:bg-white/10 rounded text-emerald-300 hover:text-emerald-200">Seed Demo</button>
             </div>
             <button 
               onClick={handleBatchAIScreening}
@@ -313,6 +380,25 @@ const App: React.FC = () => {
         {/* Sidebar */}
         <aside className="w-72 bg-slate-50 border-r border-slate-200 overflow-y-auto p-5 space-y-8">
           <div>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Analytics Overview</h3>
+            <button 
+              onClick={() => { setShowPrismaFlow(true); setDecisionFilter('NONE'); }}
+              className={`flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
+                showPrismaFlow ? 'bg-white shadow-sm border border-slate-200 text-vnu-blue' : 'text-slate-600 hover:bg-slate-200/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-1.5 rounded-lg ${showPrismaFlow ? 'bg-vnu-blue text-white' : 'bg-blue-50 text-blue-600'}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2-2v6a2 2 0 00-2-2H3a2 2 0 00-2 2v6m18-10V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v4a2 2 0 00-2 2v6m-6-10h-2a2 2 0 00-2 2v4a2 2 0 00-2 2v6" />
+                  </svg>
+                </div>
+                <span>PRISMA Flow Diagram</span>
+              </div>
+            </button>
+          </div>
+
+          <div>
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Review Decisions</h3>
             <div className="space-y-1.5">
               {[
@@ -324,20 +410,20 @@ const App: React.FC = () => {
               ].map(opt => (
                 <button 
                   key={opt.value}
-                  onClick={() => setDecisionFilter(opt.value)}
+                  onClick={() => { setDecisionFilter(opt.value); setShowPrismaFlow(false); }}
                   className={`flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group ${
-                    decisionFilter === opt.value ? 'bg-white shadow-sm border border-slate-200 text-vnu-blue' : 'text-slate-600 hover:bg-slate-200/50'
+                    !showPrismaFlow && decisionFilter === opt.value ? 'bg-white shadow-sm border border-slate-200 text-vnu-blue' : 'text-slate-600 hover:bg-slate-200/50'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-1.5 rounded-lg ${decisionFilter === opt.value ? 'bg-vnu-blue text-white' : opt.bg + ' ' + opt.color}`}>
+                    <div className={`p-1.5 rounded-lg ${!showPrismaFlow && decisionFilter === opt.value ? 'bg-vnu-blue text-white' : opt.bg + ' ' + opt.color}`}>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={opt.icon} />
                       </svg>
                     </div>
                     <span>{opt.label}</span>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${decisionFilter === opt.value ? 'bg-vnu-blue text-white' : 'bg-slate-200 text-slate-500'}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${!showPrismaFlow && decisionFilter === opt.value ? 'bg-vnu-blue text-white' : 'bg-slate-200 text-slate-500'}`}>
                     {opt.count}
                   </span>
                 </button>
@@ -353,8 +439,8 @@ const App: React.FC = () => {
           <div>
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Keywords for Inclusion</h3>
             <div className="flex flex-wrap gap-1">
-              {['RCT', 'Human', 'Clinical trial', 'Hypertension'].map(kw => (
-                <span key={kw} onClick={() => setCriteria(prev => ({...prev, intervention: prev.intervention + (prev.intervention ? ', ' : '') + kw}))} className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded border border-emerald-100 cursor-pointer hover:bg-emerald-100">
+              {['HFD', 'HFHS', 'HCD', 'C57BL/6', 'ob/ob', 'NAFLD', 'NASH', 'HOMA-IR', 'LDL-C', 'ALT/AST'].map(kw => (
+                <span key={kw} onClick={() => setCriteria(prev => ({...prev, outcome: prev.outcome.includes(kw) ? prev.outcome : prev.outcome + ', ' + kw}))} className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 rounded border border-emerald-100 cursor-pointer hover:bg-emerald-100">
                   {kw}
                 </span>
               ))}
@@ -365,7 +451,9 @@ const App: React.FC = () => {
         {/* Main Workspace */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto space-y-6">
-            {activeStage === ReviewStage.IDENTIFICATION ? (
+            {showPrismaFlow ? (
+              <Dashboard papers={papers} />
+            ) : activeStage === ReviewStage.IDENTIFICATION ? (
               <div className="flex flex-col items-center justify-center min-h-[70vh] py-12">
                 <div className="w-full max-w-3xl">
                    <div className="text-center mb-12">
@@ -420,7 +508,6 @@ const App: React.FC = () => {
               </div>
             ) : (
               <>
-                <Dashboard papers={papers} />
 
                 <div className="flex items-center justify-between bg-white px-6 py-3 rounded-xl border border-slate-200 shadow-sm">
                   <div className="relative flex-1 max-w-md">
@@ -524,14 +611,17 @@ const App: React.FC = () => {
                                     <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.MAYBE ? 'text-amber-100' : 'text-slate-400'}`}>Shortcut: M</span>
                                  </button>
 
-                                 <button 
-                                    onClick={() => updatePaperStatus(paper.id, PaperStatus.ABSTRACT_EXCLUDE)}
+                                 <button
+                                    onClick={() => handleExclude(paper.id, PaperStatus.ABSTRACT_EXCLUDE)}
                                     className={`relative flex flex-col items-center justify-center w-full max-w-[140px] px-2 py-3 rounded-xl transition-all border ${
                                        paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'bg-rose-600 border-rose-600 text-white shadow-xl shadow-rose-200 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-rose-500 hover:text-rose-600'
                                     }`}
                                  >
                                     <span className="font-black uppercase tracking-widest text-sm mb-1 z-10 relative">Exclude</span>
                                     <span className={`text-[10px] font-bold z-10 relative ${paper.status === PaperStatus.ABSTRACT_EXCLUDE ? 'text-rose-200' : 'text-slate-400'}`}>Shortcut: E</span>
+                                    {paper.exclusionReason && paper.status === PaperStatus.ABSTRACT_EXCLUDE && (
+                                      <span className="text-[9px] italic text-rose-100 truncate w-full text-center px-1 z-10 relative">{paper.exclusionReason}</span>
+                                    )}
                                  </button>
                               </div>
 
@@ -576,30 +666,46 @@ const App: React.FC = () => {
                                  {paper.extractionData && (
                                     <div className="mt-10 pt-8 border-t border-slate-100">
                                        <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-emerald-600 mb-6">
-                                         <span className="w-4 h-[2px] bg-emerald-500"></span> Extracted Structured Data (QA)
+                                         <span className="w-4 h-[2px] bg-emerald-500"></span> Extracted Evidence Table (PICO)
                                        </h3>
-                                       <div className="bg-white border border-emerald-100 shadow-lg shadow-emerald-100/50 rounded-2xl overflow-hidden text-sm">
-                                          <div className="grid grid-cols-[140px_1fr] border-b border-emerald-50">
-                                             <div className="bg-emerald-50/50 p-4 font-bold text-emerald-800 uppercase tracking-widest text-[11px] flex items-center">Methodology</div>
-                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.methodology}</div>
-                                          </div>
-                                          <div className="grid grid-cols-[140px_1fr] border-b border-emerald-50">
-                                             <div className="bg-emerald-50/50 p-4 font-bold text-emerald-800 uppercase tracking-widest text-[11px] flex items-center">Sample Size</div>
-                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.sampleSize}</div>
-                                          </div>
-                                          <div className="grid grid-cols-[140px_1fr] border-b border-emerald-50">
-                                             <div className="bg-emerald-50/50 p-4 font-bold text-emerald-800 uppercase tracking-widest text-[11px] flex items-center">Key Findings</div>
-                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.keyFindings}</div>
-                                          </div>
-                                          <div className="grid grid-cols-[140px_1fr] border-b border-emerald-50">
-                                             <div className="bg-emerald-50/50 p-4 font-bold text-emerald-800 uppercase tracking-widest text-[11px] flex items-center">Limitations</div>
-                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.limitations}</div>
-                                          </div>
-                                          <div className="grid grid-cols-[140px_1fr]">
-                                             <div className="bg-rose-50/50 p-4 font-bold text-rose-800 uppercase tracking-widest text-[11px] flex items-center">Risk of Bias</div>
-                                             <div className="p-4 text-slate-700 font-medium">{paper.extractionData.riskOfBias}</div>
-                                          </div>
+                                       <div className="bg-white border border-emerald-100 shadow-lg shadow-emerald-100/50 rounded-2xl overflow-hidden text-sm divide-y divide-emerald-50">
+                                          {/* Population */}
+                                          <ExtractionSection header="Population" color="emerald">
+                                            <ExtractionRow label="Mouse Strain" value={paper.extractionData.mouseStrain} />
+                                            <ExtractionRow label="Sex / Age" value={paper.extractionData.sexAge} />
+                                            <ExtractionRow label="Sample Size" value={paper.extractionData.sampleSize} />
+                                          </ExtractionSection>
+                                          {/* Intervention */}
+                                          <ExtractionSection header="Intervention" color="blue">
+                                            <ExtractionRow label="Diet Type" value={paper.extractionData.dietType} />
+                                            <ExtractionRow label="Composition" value={paper.extractionData.dietComposition} />
+                                            <ExtractionRow label="Duration" value={paper.extractionData.duration} />
+                                            <ExtractionRow label="Control Diet" value={paper.extractionData.controlDiet} />
+                                          </ExtractionSection>
+                                          {/* Outcomes */}
+                                          <ExtractionSection header="Metabolic Outcomes" color="amber">
+                                            <ExtractionRow label="TC / TG" value={paper.extractionData.tcTg} />
+                                            <ExtractionRow label="LDL / HDL" value={paper.extractionData.ldlHdl} />
+                                            <ExtractionRow label="Glucose / Insulin" value={paper.extractionData.glucoseInsulin} />
+                                            <ExtractionRow label="HOMA-IR" value={paper.extractionData.homaIr} />
+                                            <ExtractionRow label="ALT / AST" value={paper.extractionData.altAst} />
+                                            <ExtractionRow label="Liver Histology" value={paper.extractionData.liverHistology} />
+                                          </ExtractionSection>
+                                          {/* Summary */}
+                                          <ExtractionSection header="Summary" color="slate">
+                                            <ExtractionRow label="Methodology" value={paper.extractionData.methodology} />
+                                            <ExtractionRow label="Key Findings" value={paper.extractionData.keyFindings} />
+                                            <ExtractionRow label="Limitations" value={paper.extractionData.limitations} />
+                                            <ExtractionRow label="Risk of Bias" value={paper.extractionData.riskOfBias} highlight />
+                                          </ExtractionSection>
                                        </div>
+                                       {/* Evidence Traceability */}
+                                       {paper.extractionData.evidenceSpan && (
+                                         <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                                           <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Source Evidence Span (Traceability)</div>
+                                           <p className="text-[13px] text-slate-600 italic leading-relaxed font-mono">"{paper.extractionData.evidenceSpan}"</p>
+                                         </div>
+                                       )}
                                     </div>
                                  )}
                               </div>
@@ -613,8 +719,70 @@ const App: React.FC = () => {
           </div>
         </main>
       </div>
+      {/* Exclusion Reason Modal */}
+      {exclusionModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center" onClick={() => setExclusionModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-1">Exclusion Reason</h3>
+            <p className="text-xs text-slate-500 mb-4">PRISMA requires recording why a study was excluded. Select or type a reason:</p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[
+                'Not a mouse study', 'No dietary intervention', 'No metabolic outcomes',
+                'No control group', 'Insufficient data', 'Wrong species', 'Conference abstract',
+                'Review/Meta-analysis', 'Duplicate'
+              ].map(reason => (
+                <button
+                  key={reason}
+                  onClick={() => setExclusionReasonInput(reason)}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all font-semibold ${
+                    exclusionReasonInput === reason
+                      ? 'bg-rose-600 text-white border-rose-600'
+                      : 'border-slate-200 text-slate-600 hover:border-rose-400 hover:text-rose-600'
+                  }`}
+                >{reason}</button>
+              ))}
+            </div>
+            <input
+              type="text"
+              value={exclusionReasonInput}
+              onChange={e => setExclusionReasonInput(e.target.value)}
+              placeholder="Or type custom reason..."
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-rose-400"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setExclusionModal(null)} className="flex-1 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button onClick={confirmExclusion} className="flex-1 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700">Confirm Exclusion</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const SECTION_COLORS: Record<string, { header: string; row: string }> = {
+  emerald: { header: 'bg-emerald-50/70 text-emerald-800', row: 'bg-emerald-50/30' },
+  blue:    { header: 'bg-blue-50/70 text-blue-800',    row: 'bg-blue-50/30' },
+  amber:   { header: 'bg-amber-50/70 text-amber-800',  row: 'bg-amber-50/30' },
+  slate:   { header: 'bg-slate-50/70 text-slate-700',  row: 'bg-slate-50/30' },
+};
+
+const ExtractionSection: React.FC<{ header: string; color: string; children: React.ReactNode }> = ({ header, color, children }) => {
+  const c = SECTION_COLORS[color] || SECTION_COLORS.slate;
+  return (
+    <div>
+      <div className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${c.header}`}>{header}</div>
+      {children}
+    </div>
+  );
+};
+
+const ExtractionRow: React.FC<{ label: string; value?: string; highlight?: boolean }> = ({ label, value, highlight }) => (
+  <div className={`grid grid-cols-[150px_1fr] border-t border-emerald-50 ${highlight ? 'bg-rose-50/30' : ''}`}>
+    <div className={`p-3 font-bold uppercase tracking-wider text-[10px] flex items-start pt-3.5 ${highlight ? 'text-rose-700' : 'text-slate-500'}`}>{label}</div>
+    <div className="p-3 text-slate-700 font-medium text-[13px] leading-relaxed">{value || <span className="text-slate-300 italic">Not extracted</span>}</div>
+  </div>
+);
 
 export default App;

@@ -187,16 +187,30 @@ def extract_data(request: ExtractRequest):
     print(f"[Extract] First 200 chars: {text_to_analyze[:200]}")
     
     if qa_pipeline.model is None:
-         # Fallback mock for UI usage without downloading weights
          return {
              "methodology": "Mock RCT (HuggingFace weights missing)",
-             "sampleSize": "N=200",
+             "sampleSize": "N=10 mice per group",
+             "mouseStrain": "C57BL/6J (mock)",
+             "sexAge": "Male, 6-8 weeks (mock)",
+             "dietType": "High Fat Diet HFD 60% kcal fat (mock)",
+             "dietComposition": "60% kcal from fat (mock)",
+             "duration": "12 weeks (mock)",
+             "controlDiet": "Standard chow 10% kcal fat (mock)",
+             "tcTg": "TC 8.2 mmol/L, TG 2.1 mmol/L (mock)",
+             "ldlHdl": "LDL 5.1 mmol/L, HDL 1.2 mmol/L (mock)",
+             "glucoseInsulin": "Fasting glucose 12 mmol/L (mock)",
+             "homaIr": "HOMA-IR 8.5 (mock)",
+             "altAst": "ALT 65 U/L, AST 72 U/L (mock)",
+             "liverHistology": "Moderate steatosis (mock)",
              "keyFindings": "Model was not loaded locally. See server logs.",
              "limitations": "Placeholder limitations",
-             "riskOfBias": "High"
+             "riskOfBias": "High",
+             "evidenceSpan": text_to_analyze[:300] if text_to_analyze else "",
          }
          
-    extracted = qa_pipeline.extract_structured_data(paper.title, text_to_analyze)
+    from sr_core.ingest.parser import chunk_by_structure
+    chunks = chunk_by_structure(text_to_analyze)
+    extracted = qa_pipeline.extract_structured_data_from_chunks(paper.title, chunks)
     print(f"[Extract] Results: {extracted}")
     return extracted
 
@@ -229,6 +243,10 @@ async def parse_pdf_file(file: UploadFile = File(...)):
                 "doi": result.get("doi", ""),
                 "year": result.get("year", ""),
                 "keywords": result.get("keywords", []),
+                "used_ocr": result.get("used_ocr", False),
+                "needs_ocr": result.get("needs_ocr", False),
+                "n_tables": len(result.get("tables", []) or []),
+                "n_pages": len(result.get("page_texts", []) or []),
             }
         else:
             return {"text": str(result), "title": "", "authors": "", "abstract": "", "doi": "", "year": "", "keywords": []}

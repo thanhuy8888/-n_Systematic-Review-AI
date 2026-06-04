@@ -43,14 +43,28 @@ async def upload_files(files: List[UploadFile] = File(...), db: Session = Depend
                 papers_added = _insert_papers(db, papers)
             elif ext == ".pdf":
                 # PDF typically represents a single paper or full text
-                text_content = extract_text_from_pdf(file_path)
-                # Create a placeholder paper record
-                paper = Paper(
-                    paper_id=f"pdf_{file.filename}", 
-                    title=file.filename,
-                    abstract=text_content[:2000],  # store first 2000 chars as abstract for now
-                    ingest_status="pdf_parsed"
-                )
+                parsed = extract_text_from_pdf(file_path)
+                if isinstance(parsed, dict) and "error" not in parsed:
+                    raw_text = parsed.get("raw_text", "")
+                    abstract_text = parsed.get("abstract", "") or raw_text[:2000]
+                    paper = Paper(
+                        paper_id=parsed.get("paper_id") or f"pdf_{file.filename}", 
+                        title=parsed.get("title") or file.filename,
+                        abstract=abstract_text,
+                        authors=parsed.get("authors"),
+                        year=int(parsed.get("year")) if str(parsed.get("year")).isdigit() else None,
+                        doi=parsed.get("doi"),
+                        journal=parsed.get("journal"),
+                        ingest_status="pdf_parsed"
+                    )
+                else:
+                    error_msg = parsed.get("error", "Unknown parsing error") if isinstance(parsed, dict) else str(parsed)
+                    paper = Paper(
+                        paper_id=f"pdf_{file.filename}", 
+                        title=file.filename,
+                        abstract=f"Error parsing PDF: {error_msg}",
+                        ingest_status="error"
+                    )
                 db.merge(paper)
                 db.commit()
                 papers_added = 1
