@@ -47,7 +47,7 @@ source venv/bin/activate
 # 3. Install the required Python packages
 pip install -r requirements.txt
 ```
-*(Note: The first time you run the backend, it will automatically download the HuggingFace models `pritamdeka/S-PubMedBert-MS-MARCO` and `deepset/roberta-base-squad2`. This requires internet access and ~1GB of disk space. To regenerate the hybrid screening classifier (`sr_core/screening_model/hybrid_xgb_model.pkl` and `tfidf_vectorizer.pkl`), run `python experiments/baselines/evaluate_transformer.py` against a labelled JSONL corpus).*
+*(Note: The first time you run the backend, it will automatically download the HuggingFace models `pritamdeka/S-PubMedBert-MS-MARCO` and `deepset/roberta-base-squad2`. This requires internet access and ~1GB of disk space. To regenerate the hybrid screening classifier (`sr_core/screening_model/hybrid_xgb_model.pkl` and `tfidf_vectorizer.pkl`), run `python experiments/baselines/evaluate_screening_clean.py` against a labelled JSONL corpus (leakage-free; also writes the result figures)).*
 
 ### 3. Frontend Setup (React/Node.js)
 Open a **new** terminal, navigate to the `apps/web` directory:

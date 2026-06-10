@@ -1,0 +1,18 @@
+{
+  "base_model": "nlpie/distil-biobert",
+  "max_len": 256,
+  "freeze_layers": 3,
+  "threshold_f1": 0.57,
+  "threshold_recall95": 0.06786667555570602,
+  "target_recall": 0.95,
+  "metrics_test": {
+    "accuracy": 0.8101582014987511,
+    "precision": 0.6,
+    "recall": 0.72,
+    "f1": 0.6545454545454545,
+    "roc_auc": 0.8559156492785793,
+    "pr_auc": 0.679726559140901
+  },
+  "wss_test": 0.2664029975020816,
+  "train_seconds": 1495.329154253006
+}

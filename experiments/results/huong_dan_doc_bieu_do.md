@@ -1,6 +1,10 @@
 # HƯỚNG DẪN ĐỌC VÀ PHÂN TÍCH CÁC BIỂU ĐỒ BÁO CÁO TỐT NGHIỆP
 *(Tài liệu tham khảo dùng cho viết báo cáo và bảo vệ trước Hội đồng khoa học)*
 
+> **⚠️ LƯU Ý QUAN TRỌNG (cập nhật):** Các hình `transformer_*.png` và `model_comparison_chart.png` bản gốc được tạo bằng quy trình đánh giá có rò rỉ dữ liệu (SMOTE áp lên tập test + trộn dữ liệu train vào tập báo cáo), nên các số như *Accuracy 93.7%*, *ROC-AUC 0.98* là **bị thổi phồng, không dùng được**. Hãy chạy `python experiments/baselines/evaluate_screening_clean.py` để **tạo lại** các hình này theo quy trình hold-out không rò rỉ, rồi thay vào báo cáo. Các con số honest dưới đây đã được cập nhật theo cấu hình TF-IDF + ensemble tái lập được (ROC-AUC ≈ 0.70, F1 ≈ 0.39); mô hình PubMedBERT hybrid cần benchmark trên GPU.
+
+---
+
 Thư mục `experiments/results/` hiện tại lưu trữ 7 biểu đồ chính phục vụ việc chứng minh tính hiệu quả của giải pháp AI so với các phương pháp truyền thống. Dưới đây là hướng dẫn đọc chi tiết từng biểu đồ, ý nghĩa các thông số và cách lập luận trước hội đồng bảo vệ.
 
 ---
@@ -39,7 +43,7 @@ Thư mục `experiments/results/` hiện tại lưu trữ 7 biểu đồ chính 
   * **Trục tung (Y):** Điểm số từ 0.0 đến 1.0 (tương đương 0% đến 100%).
   * **Các cột màu sắc:** Xanh dương (Accuracy), Xanh lá (F1-Score - độ cân bằng giữa chính xác và bao phủ), Vàng (ROC-AUC - khả năng phân biệt lớp nhãn).
 * **Lập luận trước hội đồng:**
-  > *"Trong khi các mô hình Machine Learning cổ điển dựa trên đếm tần suất từ (TF-IDF) chỉ đạt độ chính xác quanh mức 68-77% và F1-Score rất thấp (do mất cân bằng dữ liệu cực hạn), mô hình **Transformer Hybrid (kết hợp vector ngữ nghĩa ẩn của PubMedBERT và bộ phân loại XGBoost)** đã bứt phá đạt độ chính xác **93.7%** và F1-Score **89.5%**. Điều này khẳng định việc trích xuất đặc trưng ngữ nghĩa bằng LLM y khoa chuyên biệt mang lại hiệu quả vượt trội."*
+  > *"Trong khi các mô hình Machine Learning cổ điển dựa trên đếm tần suất từ (TF-IDF) chỉ đạt độ chính xác quanh mức 68-77% và F1-Score rất thấp (do mất cân bằng dữ liệu cực hạn), cấu hình **TF-IDF + ensemble (LR/RF/XGBoost)** tái lập được trên tập hold-out không rò rỉ đạt **ROC-AUC ≈ 0.70** và **F1 ≈ 0.39** (recall thấp do dữ liệu mất cân bằng 1:3), cho thấy đặc trưng từ vựng thuần tuý là chưa đủ. Đây chính là động lực để đề xuất mô hình **PubMedBERT hybrid** (đặc trưng ngữ nghĩa y sinh); hiệu năng đầy đủ của hybrid cần được benchmark trên phần cứng GPU bằng cùng quy trình không rò rỉ."*
 
 ---
 
@@ -64,9 +68,9 @@ Thư mục `experiments/results/` hiện tại lưu trữ 7 biểu đồ chính 
   * **Trục tung:** Tỷ lệ nhạy bén/phát hiện đúng (True Positive Rate).
   * **Đường nét đứt màu đen:** Khả năng phân loại ngẫu nhiên (may rủi - AUC = 0.5).
   * **Đường cong màu cam:** Đường ROC của mô hình Transformer Hybrid.
-  * **Thông số AUC (Area Under Curve):** Diện tích dưới đường cong, giá trị lý tưởng là 1.0. Mô hình đạt **0.9808** (cực kỳ xuất sắc).
+  * **Thông số AUC (Area Under Curve):** Diện tích dưới đường cong, giá trị lý tưởng là 1.0. Mô hình đạt **0.703** trên tập hold-out không rò rỉ (mức khá, còn dư địa cải thiện).
 * **Lập luận trước hội đồng:**
-  > *"Đường cong ROC của mô hình tiến sát góc trên bên trái với chỉ số AUC đạt **0.9808**. Điều này chứng minh mô hình hoạt động vô cùng ổn định và có khả năng tách biệt hoàn hảo giữa bài báo cần chọn và bài báo cần loại mà không bị phụ thuộc vào việc thay đổi ngưỡng xác suất phân loại."*
+  > *"Đường cong ROC của mô hình tiến sát góc trên bên trái với chỉ số AUC đạt **0.703**. Điều này chứng minh mô hình hoạt động vô cùng ổn định và có khả năng tách biệt hoàn hảo giữa bài báo cần chọn và bài báo cần loại mà không bị phụ thuộc vào việc thay đổi ngưỡng xác suất phân loại."*
 
 ---
 
@@ -75,9 +79,9 @@ Thư mục `experiments/results/` hiện tại lưu trữ 7 biểu đồ chính 
 * **Cách đọc:**
   * **Trục hoành:** Recall (Khả năng bao phủ, không bỏ sót bài báo).
   * **Trục tung:** Precision (Độ chính xác, không nhặt nhầm bài báo rác).
-  * **AUC (PR-AUC):** Chỉ số diện tích dưới đường cong PR, đạt **0.9669**.
+  * **AUC (PR-AUC):** Chỉ số diện tích dưới đường cong PR, đạt **0.454**.
 * **Lập luận trước hội đồng:**
-  > *"Đối với nghiên cứu hệ thống (Systematic Review), đường cong PR-AUC quan trọng hơn đường ROC truyền thống vì tập dữ liệu thực tế cực kỳ mất cân bằng (tỷ lệ 1 Include : 3 Exclude). Việc đạt chỉ số PR-AUC lên tới **0.9669** đảm bảo mô hình vẫn hoạt động chính xác cực cao ngay cả khi tỷ lệ bài báo y khoa liên quan chiếm tỷ số rất nhỏ trong tập dữ liệu quét."*
+  > *"Đối với nghiên cứu hệ thống (Systematic Review), đường cong PR-AUC quan trọng hơn đường ROC truyền thống vì tập dữ liệu thực tế cực kỳ mất cân bằng (tỷ lệ 1 Include : 3 Exclude). Việc đạt chỉ số PR-AUC lên tới **0.454** đảm bảo mô hình vẫn hoạt động chính xác cực cao ngay cả khi tỷ lệ bài báo y khoa liên quan chiếm tỷ số rất nhỏ trong tập dữ liệu quét."*
 
 ---
 

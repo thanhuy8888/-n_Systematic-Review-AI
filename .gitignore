@@ -60,3 +60,14 @@ apps/web/.env.local
 # *.pkl (Allowing our specific hybrid model)
 # (Note: I will add the hybrid_xgb_model.pkl specifically if it's small, but usually keep them out if they are large.
 # Let me check the size of the pkl first.)
+
+# Fine-tuned PubMedBERT binary (~251MB, exceeds GitHub's 100MB limit).
+# Reproduce locally with: python experiments/baselines/finetune_pubmedbert_cpu.py
+# The thresholds/metrics are tracked separately in finetuned_meta.json.
+sr_core/screening_model/finetuned_pubmedbert/
+
+# Embedding cache (regenerable; speeds up re-runs of evaluate_screening_clean_cpu.py)
+experiments/cache/
+
+# Scratch chart comparisons
+_chartcheck/

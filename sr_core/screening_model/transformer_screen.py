@@ -13,13 +13,18 @@ Pipeline:
                        v
               include / exclude probability
 
-At inference time this module loads the persisted hybrid classifier from
-hybrid_xgb_model.pkl and the TF-IDF vectorizer from tfidf_vectorizer.pkl
-(both produced by experiments/baselines/evaluate_transformer.py).
+At inference time this module prefers an end-to-end fine-tuned PubMedBERT
+classifier (sr_core/screening_model/finetuned_pubmedbert/, produced by
+experiments/baselines/finetune_pubmedbert.py, or its CPU-optimised twin
+finetune_pubmedbert_cpu.py) when available. Otherwise it loads the persisted
+hybrid classifier from hybrid_xgb_model.pkl and the TF-IDF vectorizer from
+tfidf_vectorizer.pkl.
 
-If either artifact is missing (fresh checkout with no training run yet), the
-screener falls back to a PubMedBERT-only PICO-similarity scorer so the API
-stays functional, and the rationale string records the degraded mode.
+If no trained artifact is available (fresh checkout), the screener falls back
+to a PubMedBERT-only PICO-similarity scorer so the API stays functional, and
+the rationale string records the degraded mode.
+
+Inference priority: finetuned -> hybrid -> embedding-only -> keyword heuristic.
 
 Public API (unchanged for backward compatibility with apps/api/routers/screening.py):
     TransformerScreeningModel
@@ -53,6 +58,14 @@ try:
 except Exception:
     _JOBLIB_OK = False
 
+try:
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    _HF_OK = True
+except Exception:
+    AutoTokenizer = None  # type: ignore
+    AutoModelForSequenceClassification = None  # type: ignore
+    _HF_OK = False
+
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -66,14 +79,22 @@ _MODEL_DIR = os.path.dirname(os.path.abspath(__file__))
 HYBRID_CLF_PATH = os.path.join(_MODEL_DIR, "hybrid_xgb_model.pkl")
 TFIDF_PATH = os.path.join(_MODEL_DIR, "tfidf_vectorizer.pkl")
 
+# End-to-end fine-tuned PubMedBERT classifier (produced by
+# experiments/baselines/finetune_pubmedbert.py or finetune_pubmedbert_cpu.py).
+# When present it is the
+# highest-priority inference path; otherwise the screener falls back to the
+# hybrid XGBoost path, then embedding-only, then keyword heuristic.
+FINETUNED_DIR = os.path.join(_MODEL_DIR, "finetuned_pubmedbert")
+FINETUNED_META = os.path.join(_MODEL_DIR, "finetuned_meta.json")
+
 
 class TransformerScreeningModel:
     """
-    Hybrid PubMedBERT + XGBoost screener.
+    Screener with a graceful capability ladder.
 
     The constructor tries to load every component; missing components only
-    degrade the mode (full hybrid -> embedding-similarity fallback) without
-    raising, so the API can still serve traffic on a fresh checkout.
+    degrade the mode (fine-tuned -> hybrid -> embedding-similarity -> keyword)
+    without raising, so the API can still serve traffic on a fresh checkout.
     """
 
     def __init__(self, model_name: str = MODEL_NAME, device: Optional[str] = None):
@@ -82,13 +103,22 @@ class TransformerScreeningModel:
         self.embedder: Optional[SentenceTransformer] = None
         self.classifier = None
         self.vectorizer = None
-        self.mode = "fallback"  # set to "hybrid" only when every artifact loads
+        # Fine-tuned transformer components
+        self.ft_model = None
+        self.ft_tokenizer = None
+        self.ft_threshold = 0.5
+        self.ft_max_len = 320
+        self.mode = "fallback"  # finetuned > hybrid > embedding > keyword
 
+        # Try the strongest path first. If it loads, mode becomes "finetuned"
+        # and the hybrid/embedding artifacts are only kept as a safety net.
+        self._load_finetuned()
         self._load_embedder()
         self._load_hybrid_artifacts()
 
         print(
-            f"[Screening] PubMedBERT loaded={self.embedder is not None}, "
+            f"[Screening] finetuned loaded={self.ft_model is not None}, "
+            f"PubMedBERT loaded={self.embedder is not None}, "
             f"classifier loaded={self.classifier is not None}, "
             f"vectorizer loaded={self.vectorizer is not None}, mode={self.mode}"
         )
@@ -96,6 +126,30 @@ class TransformerScreeningModel:
     # ------------------------------------------------------------------ #
     # Setup
     # ------------------------------------------------------------------ #
+    def _load_finetuned(self) -> None:
+        """Load the end-to-end fine-tuned PubMedBERT classifier if present."""
+        if not (_HF_OK and _TORCH_OK) or not os.path.isdir(FINETUNED_DIR):
+            return
+        try:
+            import json
+            self.ft_tokenizer = AutoTokenizer.from_pretrained(FINETUNED_DIR)
+            self.ft_model = AutoModelForSequenceClassification.from_pretrained(FINETUNED_DIR)
+            self.ft_model.to(self.device)
+            self.ft_model.eval()
+            if os.path.exists(FINETUNED_META):
+                with open(FINETUNED_META, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+                # Default to the F1-optimal threshold tuned on validation.
+                self.ft_threshold = float(meta.get("threshold_f1", 0.5))
+                self.ft_max_len = int(meta.get("max_len", 320))
+            self.mode = "finetuned"
+            print(f"[Screening] Loaded fine-tuned PubMedBERT from {FINETUNED_DIR} "
+                  f"(threshold={self.ft_threshold:.2f}).")
+        except Exception as e:
+            print(f"[Screening] Warning: could not load fine-tuned model: {e}")
+            self.ft_model = None
+            self.ft_tokenizer = None
+
     def _load_embedder(self) -> None:
         if not _ST_OK:
             print("[Screening] sentence-transformers not installed - embeddings disabled.")
@@ -120,7 +174,8 @@ class TransformerScreeningModel:
             self.classifier = None
             self.vectorizer = None
 
-        if self.embedder is not None and self.classifier is not None and self.vectorizer is not None:
+        if (self.mode != "finetuned" and self.embedder is not None
+                and self.classifier is not None and self.vectorizer is not None):
             self.mode = "hybrid"
 
     # ------------------------------------------------------------------ #
@@ -196,11 +251,60 @@ class TransformerScreeningModel:
                 "reason": "No strict PICO criteria provided. Auto-inclusion.",
             }
 
+        if self.mode == "finetuned":
+            return self._predict_finetuned(paper_text, abstract, criteria, threshold)
         if self.mode == "hybrid":
             return self._predict_hybrid(paper_text, abstract, criteria, threshold)
         if self.embedder is not None:
             return self._predict_embedding_only(paper_text, abstract, criteria, threshold)
         return self._predict_keyword_only(paper_text, abstract, criteria, threshold)
+
+    # ------------------------------------------------------------------ #
+    # Mode 0 - end-to-end fine-tuned PubMedBERT (strongest path)
+    # ------------------------------------------------------------------ #
+    def _predict_finetuned(
+        self,
+        paper_text: str,
+        abstract: str,
+        criteria: Dict[str, str],
+        threshold: float,
+    ) -> Dict:
+        # Use the validation-tuned threshold by default; honour an explicit
+        # non-default threshold from the caller if one is supplied.
+        thr = threshold if abs(threshold - 0.5) > 1e-6 else self.ft_threshold
+        try:
+            import torch
+            inputs = self.ft_tokenizer(
+                paper_text, truncation=True, padding="max_length",
+                max_length=self.ft_max_len, return_tensors="pt",
+            ).to(self.device)
+            with torch.no_grad():
+                logits = self.ft_model(**inputs).logits
+                prob_include = float(torch.softmax(logits, dim=1)[0, 1].item())
+        except Exception as e:
+            print(f"[Screening] Fine-tuned inference failed ({e}); falling back.")
+            if self.embedder is not None and self.classifier is not None:
+                return self._predict_hybrid(paper_text, abstract, criteria, threshold)
+            return self._predict_embedding_only(paper_text, abstract, criteria, threshold)
+
+        decision, is_uncertain = self._decide(prob_include, thr)
+        matched = [kw for kw in self._extract_keywords(criteria) if kw in paper_text.lower()]
+        best_sent = self._best_sentence(abstract, matched)
+        rationale = (
+            f"Fine-tuned PubMedBERT include-probability: {prob_include:.0%} "
+            f"(decision threshold {thr:.2f}).\n"
+            f"Matched PICO keywords ({len(matched)}): {', '.join(matched[:8]) or '-'}."
+        )
+        if best_sent:
+            rationale += f"\nEvidence: \"{best_sent}\""
+        if is_uncertain:
+            rationale += "\nLow margin - flagged for human review."
+        return {
+            "decision": decision,
+            "confidence": prob_include,
+            "is_uncertain": is_uncertain,
+            "reason": rationale,
+        }
 
     # ------------------------------------------------------------------ #
     # Mode 1 - full hybrid (matches thesis Ch. 3.4 / 4.3 numbers)
