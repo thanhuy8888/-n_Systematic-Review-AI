@@ -65,6 +65,7 @@ apps/web/.env.local
 # Reproduce locally with: python experiments/baselines/finetune_pubmedbert_cpu.py
 # The thresholds/metrics are tracked separately in finetuned_meta.json.
 sr_core/screening_model/finetuned_pubmedbert/
+sr_core/screening_model/finetuned_pubmedbert_ckpt/
 
 # Embedding cache (regenerable; speeds up re-runs of evaluate_screening_clean_cpu.py)
 experiments/cache/

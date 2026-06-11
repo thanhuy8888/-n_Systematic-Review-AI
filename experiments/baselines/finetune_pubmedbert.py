@@ -65,6 +65,8 @@ def parse_args():
     p.add_argument("--max-len", type=int, default=MAX_LEN)
     p.add_argument("--target-recall", type=float, default=TARGET_RECALL)
     p.add_argument("--seed", type=int, default=RANDOM_STATE)
+    p.add_argument("--freeze-layers", type=int, default=0,
+                   help="freeze embeddings + bottom N encoder layers (0 = full FT)")
     return p.parse_args()
 
 
@@ -111,6 +113,30 @@ def f1_optimal_threshold(y_true, y_prob):
         if f1 > best_f1:
             best_f1, best_t = f1, float(t)
     return best_t, best_f1
+
+
+def freeze_bottom_layers(model, n):
+    """Freeze the embeddings + the bottom n transformer encoder layers."""
+    if n <= 0:
+        return 0
+    frozen = 0
+    base = getattr(model, "bert", None) or getattr(model, "roberta", None) \
+        or getattr(model, "distilbert", None) or model.base_model
+    emb = getattr(base, "embeddings", None)
+    if emb is not None:
+        for p in emb.parameters():
+            p.requires_grad = False
+            frozen += p.numel()
+    # encoder layers (BERT: encoder.layer ; DistilBERT: transformer.layer)
+    enc = getattr(base, "encoder", None) or getattr(base, "transformer", None)
+    layers = getattr(enc, "layer", None) if enc is not None else None
+    if layers is not None:
+        for i, layer in enumerate(layers):
+            if i < n:
+                for p in layer.parameters():
+                    p.requires_grad = False
+                    frozen += p.numel()
+    return frozen
 
 
 # --------------------------------------------------------------------------- #
@@ -198,6 +224,10 @@ def main():
 
     model = AutoModelForSequenceClassification.from_pretrained(args.model, num_labels=2)
     model.to(device)
+    frozen = freeze_bottom_layers(model, args.freeze_layers)
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Frozen params: {frozen:,} | Trainable: {trainable:,} "
+          f"(freeze_layers={args.freeze_layers})")
 
     # ---- Class weights instead of SMOTE ----
     n_pos = int(y_tr.sum())
@@ -208,7 +238,8 @@ def main():
     print(f"Class weights [exclude, include]: [{w_neg:.3f}, {w_pos:.3f}]")
     loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights)
 
-    optim = AdamW(model.parameters(), lr=args.lr, weight_decay=0.01)
+    optim = AdamW([p for p in model.parameters() if p.requires_grad],
+                  lr=args.lr, weight_decay=0.01)
     total_steps = len(dl_tr) * args.epochs
     sched = get_linear_schedule_with_warmup(
         optim, num_warmup_steps=int(0.1 * total_steps), num_training_steps=total_steps)
@@ -229,6 +260,8 @@ def main():
 
     # ---- Training loop ----
     t0 = time.time()
+    best_val_auc, best_ep = -1.0, 0
+    ckpt_dir = SAVE_DIR + "_ckpt"
     for ep in range(1, args.epochs + 1):
         model.train()
         running = 0.0
@@ -252,7 +285,25 @@ def main():
         print(f"[epoch {ep}] train_loss={running/len(dl_tr):.4f} "
               f"val_ROC-AUC={roc_auc_score(yv, pv):.4f} "
               f"val_PR-AUC={average_precision_score(yv, pv):.4f}")
+        # checkpoint the best-val epoch: an interrupted or overfit run still
+        # leaves the peak model on disk instead of only the latest epoch
+        val_auc = float(roc_auc_score(yv, pv))
+        if val_auc > best_val_auc:
+            best_val_auc, best_ep = val_auc, ep
+            model.save_pretrained(ckpt_dir)
+            tok.save_pretrained(ckpt_dir)
+            with open(os.path.join(ckpt_dir, "ckpt_info.json"), "w", encoding="utf-8") as f:
+                json.dump({"epoch": ep, "val_roc_auc": val_auc,
+                           "val_pr_auc": float(average_precision_score(yv, pv))}, f, indent=2)
     train_secs = time.time() - t0
+
+    # threshold-tune and test the BEST-val epoch, not necessarily the last one
+    if best_ep and best_ep != args.epochs:
+        print(f"\nReloading best checkpoint (epoch {best_ep}, "
+              f"val ROC-AUC {best_val_auc:.4f}) for final evaluation.")
+        model = AutoModelForSequenceClassification.from_pretrained(
+            ckpt_dir, num_labels=2)
+        model.to(device)
 
     # ---- Tune thresholds on VALIDATION only ----
     yv, pv = run_eval(dl_va)
@@ -286,6 +337,8 @@ def main():
     meta = {
         "base_model": args.model,
         "max_len": args.max_len,
+        "freeze_layers": args.freeze_layers,
+        "best_epoch": best_ep,
         "threshold_f1": t_f1,
         "threshold_recall95": t_recall,
         "target_recall": args.target_recall,

@@ -284,6 +284,8 @@ def main():
         return np.array(labels), np.array(probs)
 
     t0 = time.time()
+    best_val_auc, best_ep = -1.0, 0
+    ckpt_dir = SAVE_DIR + "_ckpt"
     for ep in range(1, args.epochs + 1):
         model.train()
         batches = length_grouped_batches(lengths, args.batch_size, args.seed + ep)
@@ -313,7 +315,25 @@ def main():
         print(f"[epoch {ep}] train_loss={running/len(batches):.4f} "
               f"val_ROC-AUC={roc_auc_score(yv, pv):.4f} "
               f"val_PR-AUC={average_precision_score(yv, pv):.4f}")
+        # checkpoint the best-val epoch: an interrupted or overfit run still
+        # leaves the peak model on disk instead of only the latest epoch
+        val_auc = float(roc_auc_score(yv, pv))
+        if val_auc > best_val_auc:
+            best_val_auc, best_ep = val_auc, ep
+            model.save_pretrained(ckpt_dir)
+            tok.save_pretrained(ckpt_dir)
+            with open(os.path.join(ckpt_dir, "ckpt_info.json"), "w", encoding="utf-8") as f:
+                json.dump({"epoch": ep, "val_roc_auc": val_auc,
+                           "val_pr_auc": float(average_precision_score(yv, pv))}, f, indent=2)
     train_secs = time.time() - t0
+
+    # threshold-tune and test the BEST-val epoch, not necessarily the last one
+    if best_ep and best_ep != args.epochs:
+        print(f"\nReloading best checkpoint (epoch {best_ep}, "
+              f"val ROC-AUC {best_val_auc:.4f}) for final evaluation.")
+        model = AutoModelForSequenceClassification.from_pretrained(
+            ckpt_dir, num_labels=2)
+        model.to(device)
 
     # ---- tune thresholds on VALIDATION only ----
     yv, pv = run_eval(dl_va)
@@ -345,7 +365,7 @@ def main():
     tok.save_pretrained(SAVE_DIR)
     meta = {
         "base_model": args.model, "max_len": args.max_len,
-        "freeze_layers": args.freeze_layers,
+        "freeze_layers": args.freeze_layers, "best_epoch": best_ep,
         "threshold_f1": t_f1, "threshold_recall95": t_recall,
         "target_recall": args.target_recall, "metrics_test": m,
         "wss_test": test_wss, "train_seconds": train_secs,
