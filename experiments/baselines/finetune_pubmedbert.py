@@ -67,6 +67,9 @@ def parse_args():
     p.add_argument("--seed", type=int, default=RANDOM_STATE)
     p.add_argument("--freeze-layers", type=int, default=0,
                    help="freeze embeddings + bottom N encoder layers (0 = full FT)")
+    p.add_argument("--init-seed", type=int, default=None,
+                   help="seed for weight init / shuffling only; the train/val/test "
+                        "split always uses --seed so every run shares one test set")
     return p.parse_args()
 
 
@@ -184,8 +187,11 @@ def main():
     if not os.path.exists(DATA_PATH):
         sys.exit(f"Dataset not found at {DATA_PATH}. Run from the project root.")
 
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
+    init_seed = args.init_seed if args.init_seed is not None else args.seed
+    np.random.seed(init_seed)
+    torch.manual_seed(init_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(init_seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Device: {device} | Model: {args.model}")
     if device == "cpu":
@@ -339,6 +345,7 @@ def main():
         "max_len": args.max_len,
         "freeze_layers": args.freeze_layers,
         "best_epoch": best_ep,
+        "init_seed": init_seed,
         "threshold_f1": t_f1,
         "threshold_recall95": t_recall,
         "target_recall": args.target_recall,

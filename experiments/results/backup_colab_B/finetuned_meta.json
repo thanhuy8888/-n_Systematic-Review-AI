@@ -1,0 +1,19 @@
+{
+  "base_model": "microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext",
+  "max_len": 256,
+  "freeze_layers": 6,
+  "best_epoch": 5,
+  "threshold_f1": 0.73,
+  "threshold_recall95": 0.07122802734375,
+  "target_recall": 0.95,
+  "metrics_test": {
+    "accuracy": 0.7851790174854288,
+    "precision": 0.5564516129032258,
+    "recall": 0.69,
+    "f1": 0.6160714285714286,
+    "roc_auc": 0.8569811320754717,
+    "pr_auc": 0.6890474522156764
+  },
+  "wss_test": 0.3405079100749375,
+  "train_seconds": 490.4291613101959
+}

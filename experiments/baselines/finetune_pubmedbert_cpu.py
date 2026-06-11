@@ -79,6 +79,9 @@ def parse_args():
     p.add_argument("--bf16", action="store_true", help="use bf16 matmul if CPU supports it")
     p.add_argument("--target-recall", type=float, default=TARGET_RECALL)
     p.add_argument("--seed", type=int, default=RANDOM_STATE)
+    p.add_argument("--init-seed", type=int, default=None,
+                   help="seed for weight init / shuffling only; the train/val/test "
+                        "split always uses --seed so every run shares one test set")
     p.add_argument("--limit", type=int, default=0, help="debug: cap dataset size (0 = all)")
     return p.parse_args()
 
@@ -183,8 +186,9 @@ def main():
     os.environ.setdefault("OMP_NUM_THREADS", str(n_threads))
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
+    init_seed = args.init_seed if args.init_seed is not None else args.seed
+    np.random.seed(init_seed)
+    torch.manual_seed(init_seed)
     device = "cpu"
     use_bf16 = args.bf16 and hasattr(torch, "bfloat16")
     print(f"Device: CPU | threads={n_threads} | bf16={use_bf16} | model={args.model}")
@@ -288,7 +292,7 @@ def main():
     ckpt_dir = SAVE_DIR + "_ckpt"
     for ep in range(1, args.epochs + 1):
         model.train()
-        batches = length_grouped_batches(lengths, args.batch_size, args.seed + ep)
+        batches = length_grouped_batches(lengths, args.batch_size, init_seed + ep)
         running, micro = 0.0, 0
         optim.zero_grad()
         for bi, batch_idx in enumerate(batches, 1):
@@ -366,6 +370,7 @@ def main():
     meta = {
         "base_model": args.model, "max_len": args.max_len,
         "freeze_layers": args.freeze_layers, "best_epoch": best_ep,
+        "init_seed": init_seed,
         "threshold_f1": t_f1, "threshold_recall95": t_recall,
         "target_recall": args.target_recall, "metrics_test": m,
         "wss_test": test_wss, "train_seconds": train_secs,
