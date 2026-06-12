@@ -87,6 +87,14 @@ TFIDF_PATH = os.path.join(_MODEL_DIR, "tfidf_vectorizer.pkl")
 FINETUNED_DIR = os.path.join(_MODEL_DIR, "finetuned_pubmedbert")
 FINETUNED_META = os.path.join(_MODEL_DIR, "finetuned_meta.json")
 
+# Optional 5-seed soft-voting ensemble (produced by
+# experiments/baselines/train_ensemble_cpu.py). When present (>=2 seed_*
+# sub-directories + ensemble_meta.json) it supersedes the single fine-tuned
+# model: per-abstract include-probabilities are averaged across all seeds,
+# which lifts discrimination (ROC-AUC) and reduces run-to-run variance.
+ENSEMBLE_DIR = os.path.join(_MODEL_DIR, "ensemble")
+ENSEMBLE_META = os.path.join(ENSEMBLE_DIR, "ensemble_meta.json")
+
 
 class TransformerScreeningModel:
     """
@@ -105,9 +113,11 @@ class TransformerScreeningModel:
         self.vectorizer = None
         # Fine-tuned transformer components
         self.ft_model = None
+        self.ft_models = []  # >=2 entries => soft-voting ensemble
         self.ft_tokenizer = None
         self.ft_threshold = 0.5
         self.ft_max_len = 320
+        self.ft_is_ensemble = False
         self.mode = "fallback"  # finetuned > hybrid > embedding > keyword
 
         # Try the strongest path first. If it loads, mode becomes "finetuned"
@@ -126,8 +136,62 @@ class TransformerScreeningModel:
     # ------------------------------------------------------------------ #
     # Setup
     # ------------------------------------------------------------------ #
+    @staticmethod
+    def _resolve_threshold(meta: dict) -> float:
+        # Systematic-review screening prioritises sensitivity: missing a
+        # relevant study (a false negative) costs far more than an extra
+        # abstract to screen (a false positive). We therefore default to the
+        # recall-oriented F2-optimal threshold (tuned on validation), falling
+        # back to the F1-optimal threshold if it is absent. The meta key
+        # "deploy_threshold" names the preferred threshold.
+        deploy_key = meta.get("deploy_threshold", "threshold_f2")
+        return float(meta.get(deploy_key, meta.get("threshold_f1", 0.5)))
+
+    def _load_ensemble(self) -> bool:
+        """Load the 5-seed soft-voting ensemble if present. Returns True on success."""
+        if not (_HF_OK and _TORCH_OK) or not os.path.isdir(ENSEMBLE_DIR):
+            return False
+        # Require a completed run: ensemble_meta.json is written only after every
+        # seed has trained, so a half-finished ensemble never goes live.
+        if not os.path.exists(ENSEMBLE_META):
+            return False
+        seed_dirs = sorted(
+            os.path.join(ENSEMBLE_DIR, d) for d in os.listdir(ENSEMBLE_DIR)
+            if d.startswith("seed_") and os.path.isdir(os.path.join(ENSEMBLE_DIR, d))
+        )
+        if len(seed_dirs) < 2:
+            return False
+        try:
+            import json
+            self.ft_tokenizer = AutoTokenizer.from_pretrained(seed_dirs[0])
+            self.ft_models = []
+            for d in seed_dirs:
+                m = AutoModelForSequenceClassification.from_pretrained(d)
+                m.to(self.device)
+                m.eval()
+                self.ft_models.append(m)
+            self.ft_model = self.ft_models[0]  # keep a handle for compatibility
+            self.ft_threshold, self.ft_max_len = 0.5, 320
+            if os.path.exists(ENSEMBLE_META):
+                with open(ENSEMBLE_META, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+                self.ft_threshold = self._resolve_threshold(meta)
+                self.ft_max_len = int(meta.get("max_len", 320))
+            self.ft_is_ensemble = True
+            self.mode = "finetuned"
+            print(f"[Screening] Loaded {len(self.ft_models)}-seed PubMedBERT ENSEMBLE from "
+                  f"{ENSEMBLE_DIR} (threshold={self.ft_threshold:.2f}).")
+            return True
+        except Exception as e:
+            print(f"[Screening] Warning: could not load ensemble ({e}); trying single model.")
+            self.ft_models = []
+            self.ft_is_ensemble = False
+            return False
+
     def _load_finetuned(self) -> None:
-        """Load the end-to-end fine-tuned PubMedBERT classifier if present."""
+        """Load the fine-tuned PubMedBERT screener (ensemble preferred, else single)."""
+        if self._load_ensemble():
+            return
         if not (_HF_OK and _TORCH_OK) or not os.path.isdir(FINETUNED_DIR):
             return
         try:
@@ -136,11 +200,11 @@ class TransformerScreeningModel:
             self.ft_model = AutoModelForSequenceClassification.from_pretrained(FINETUNED_DIR)
             self.ft_model.to(self.device)
             self.ft_model.eval()
+            self.ft_models = [self.ft_model]
             if os.path.exists(FINETUNED_META):
                 with open(FINETUNED_META, "r", encoding="utf-8") as f:
                     meta = json.load(f)
-                # Default to the F1-optimal threshold tuned on validation.
-                self.ft_threshold = float(meta.get("threshold_f1", 0.5))
+                self.ft_threshold = self._resolve_threshold(meta)
                 self.ft_max_len = int(meta.get("max_len", 320))
             self.mode = "finetuned"
             print(f"[Screening] Loaded fine-tuned PubMedBERT from {FINETUNED_DIR} "
@@ -278,9 +342,15 @@ class TransformerScreeningModel:
                 paper_text, truncation=True, padding="max_length",
                 max_length=self.ft_max_len, return_tensors="pt",
             ).to(self.device)
+            # Soft-voting: average the include-probability over every seed model
+            # (a single model when no ensemble is present).
+            models = self.ft_models or [self.ft_model]
+            probs = []
             with torch.no_grad():
-                logits = self.ft_model(**inputs).logits
-                prob_include = float(torch.softmax(logits, dim=1)[0, 1].item())
+                for m in models:
+                    logits = m(**inputs).logits
+                    probs.append(float(torch.softmax(logits, dim=1)[0, 1].item()))
+            prob_include = sum(probs) / len(probs)
         except Exception as e:
             print(f"[Screening] Fine-tuned inference failed ({e}); falling back.")
             if self.embedder is not None and self.classifier is not None:
@@ -290,8 +360,12 @@ class TransformerScreeningModel:
         decision, is_uncertain = self._decide(prob_include, thr)
         matched = [kw for kw in self._extract_keywords(criteria) if kw in paper_text.lower()]
         best_sent = self._best_sentence(abstract, matched)
+        model_desc = (
+            f"{len(self.ft_models)}-seed PubMedBERT ensemble"
+            if self.ft_is_ensemble else "Fine-tuned PubMedBERT"
+        )
         rationale = (
-            f"Fine-tuned PubMedBERT include-probability: {prob_include:.0%} "
+            f"{model_desc} include-probability: {prob_include:.0%} "
             f"(decision threshold {thr:.2f}).\n"
             f"Matched PICO keywords ({len(matched)}): {', '.join(matched[:8]) or '-'}."
         )

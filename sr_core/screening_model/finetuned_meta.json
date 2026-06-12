@@ -4,8 +4,16 @@
   "freeze_layers": 2,
   "best_epoch": 5,
   "threshold_f1": 0.58,
+  "threshold_f2": 0.26,
   "threshold_recall95": 0.021881103515625,
   "target_recall": 0.95,
+  "deploy_threshold": "threshold_f2",
+  "metrics_test_f2": {
+    "precision": 0.547,
+    "recall": 0.847,
+    "f1": 0.665,
+    "comment": "Recall-oriented operating point (F2-optimal threshold tuned on validation). Screening prioritises sensitivity: missing a relevant study (FN) costs more than an extra abstract to screen (FP)."
+  },
   "metrics_test": {
     "accuracy": 0.8168193172356369,
     "precision": 0.6015228426395939,
