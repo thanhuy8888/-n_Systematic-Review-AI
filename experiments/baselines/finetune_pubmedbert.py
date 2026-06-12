@@ -70,6 +70,17 @@ def parse_args():
     p.add_argument("--init-seed", type=int, default=None,
                    help="seed for weight init / shuffling only; the train/val/test "
                         "split always uses --seed so every run shares one test set")
+    # Round-3 recall-focused options
+    p.add_argument("--focal-loss", action="store_true",
+                   help="replace CrossEntropyLoss with Focal Loss (recommended for high recall)")
+    p.add_argument("--focal-gamma", type=float, default=2.0,
+                   help="Focal Loss gamma (down-weights easy examples; 2.0 is standard)")
+    p.add_argument("--early-stop-on", choices=["roc_auc", "pr_auc"], default="roc_auc",
+                   help="metric used to pick best checkpoint (pr_auc better for imbalanced data)")
+    p.add_argument("--lr-schedule", choices=["linear", "cosine"], default="linear",
+                   help="LR schedule: cosine annealing finds better minima for longer runs")
+    p.add_argument("--save-probs-to", default="",
+                   help="if set, save test probabilities to this .npy path (used for ensemble)")
     return p.parse_args()
 
 
@@ -116,6 +127,34 @@ def f1_optimal_threshold(y_true, y_prob):
         if f1 > best_f1:
             best_f1, best_t = f1, float(t)
     return best_t, best_f1
+
+
+class FocalLoss(object if True else None):
+    """Binary focal loss for sequence classification.
+
+    Down-weights easy (confident) examples so the model focuses on hard
+    misclassifications — typically the minority Include class.  γ=2, α biased
+    toward the positive class is the standard SR-screening recipe.
+    """
+    def __init__(self, gamma=2.0, alpha=None):
+        import torch
+        self._torch = torch
+        self.gamma = gamma
+        self.alpha = alpha  # 1-D tensor [w_neg, w_pos] on the correct device
+
+    def __call__(self, logits, labels):
+        import torch.nn.functional as F
+        log_p = F.log_softmax(logits, dim=1)
+        p = self._torch.exp(log_p)
+        log_pt = log_p.gather(1, labels.view(-1, 1)).squeeze(1)
+        pt = p.gather(1, labels.view(-1, 1)).squeeze(1)
+        focal_weight = (1.0 - pt) ** self.gamma
+        if self.alpha is not None:
+            alpha_t = self.alpha[labels]
+            loss = -(alpha_t * focal_weight * log_pt)
+        else:
+            loss = -(focal_weight * log_pt)
+        return loss.mean()
 
 
 def freeze_bottom_layers(model, n):
@@ -235,20 +274,36 @@ def main():
     print(f"Frozen params: {frozen:,} | Trainable: {trainable:,} "
           f"(freeze_layers={args.freeze_layers})")
 
-    # ---- Class weights instead of SMOTE ----
+    # ---- Loss function ----
     n_pos = int(y_tr.sum())
     n_neg = int((1 - y_tr).sum())
-    w_neg = (n_pos + n_neg) / (2.0 * n_neg)
-    w_pos = (n_pos + n_neg) / (2.0 * n_pos)
-    class_weights = torch.tensor([w_neg, w_pos], dtype=torch.float).to(device)
-    print(f"Class weights [exclude, include]: [{w_neg:.3f}, {w_pos:.3f}]")
-    loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights)
+    if args.focal_loss:
+        # α[neg] = n_pos/total, α[pos] = n_neg/total — standard focal-loss convention
+        # (higher α for the minority positive class)
+        total = n_pos + n_neg
+        alpha_vals = torch.tensor([n_pos / total, n_neg / total],
+                                  dtype=torch.float).to(device)
+        loss_fn = FocalLoss(gamma=args.focal_gamma, alpha=alpha_vals)
+        print(f"Focal Loss: gamma={args.focal_gamma}, "
+              f"alpha=[{alpha_vals[0]:.3f}(neg), {alpha_vals[1]:.3f}(pos)]")
+    else:
+        w_neg = (n_pos + n_neg) / (2.0 * n_neg)
+        w_pos = (n_pos + n_neg) / (2.0 * n_pos)
+        class_weights = torch.tensor([w_neg, w_pos], dtype=torch.float).to(device)
+        print(f"CrossEntropy weights [exclude, include]: [{w_neg:.3f}, {w_pos:.3f}]")
+        loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights)
 
     optim = AdamW([p for p in model.parameters() if p.requires_grad],
                   lr=args.lr, weight_decay=0.01)
     total_steps = len(dl_tr) * args.epochs
-    sched = get_linear_schedule_with_warmup(
-        optim, num_warmup_steps=int(0.1 * total_steps), num_training_steps=total_steps)
+    warmup_steps = int(0.1 * total_steps)
+    if args.lr_schedule == "cosine":
+        from transformers import get_cosine_schedule_with_warmup
+        sched = get_cosine_schedule_with_warmup(optim, warmup_steps, total_steps)
+        print(f"LR schedule: cosine (warmup={warmup_steps})")
+    else:
+        sched = get_linear_schedule_with_warmup(optim, warmup_steps, total_steps)
+        print(f"LR schedule: linear (warmup={warmup_steps})")
     scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda"))
 
     def run_eval(dl):
@@ -293,14 +348,19 @@ def main():
               f"val_PR-AUC={average_precision_score(yv, pv):.4f}")
         # checkpoint the best-val epoch: an interrupted or overfit run still
         # leaves the peak model on disk instead of only the latest epoch
-        val_auc = float(roc_auc_score(yv, pv))
-        if val_auc > best_val_auc:
-            best_val_auc, best_ep = val_auc, ep
+        val_roc = float(roc_auc_score(yv, pv))
+        val_pr  = float(average_precision_score(yv, pv))
+        val_metric = val_pr if args.early_stop_on == "pr_auc" else val_roc
+        stop_label = "PR-AUC" if args.early_stop_on == "pr_auc" else "ROC-AUC"
+        print(f"  → early-stop metric ({stop_label}) = {val_metric:.4f} "
+              f"(best so far = {best_val_auc:.4f})")
+        if val_metric > best_val_auc:
+            best_val_auc, best_ep = val_metric, ep
             model.save_pretrained(ckpt_dir)
             tok.save_pretrained(ckpt_dir)
             with open(os.path.join(ckpt_dir, "ckpt_info.json"), "w", encoding="utf-8") as f:
-                json.dump({"epoch": ep, "val_roc_auc": val_auc,
-                           "val_pr_auc": float(average_precision_score(yv, pv))}, f, indent=2)
+                json.dump({"epoch": ep, "val_roc_auc": val_roc,
+                           "val_pr_auc": val_pr}, f, indent=2)
     train_secs = time.time() - t0
 
     # threshold-tune and test the BEST-val epoch, not necessarily the last one
@@ -356,6 +416,10 @@ def main():
     with open(META_PATH, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
     print(f"\n[artifacts] saved fine-tuned model to {SAVE_DIR}/ and meta to {META_PATH}")
+
+    if args.save_probs_to:
+        np.save(args.save_probs_to, pt)
+        print(f"[probs] test probabilities saved to {args.save_probs_to}")
 
     # ---- Genuine leakage-free charts (overwrite the old ones) ----
     make_charts(yt, pred, pt, m)
